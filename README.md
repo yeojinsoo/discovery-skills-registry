@@ -28,23 +28,7 @@ version = "1.0.0"
 description = "실행 계획 생성/실행/수정 통합 스킬"
 ```
 
-## Release Process
-
-스킬별 독립 릴리스. 태그 패턴: `{skill-name}-v{version}`
-
-```bash
-# 1. 스킬 파일 수정
-# 2. registry.toml 버전 올리기
-# 3. 커밋 + 태그 push
-git add -A && git commit -m "update logical-analysis v1.1.0"
-git tag logical-analysis-v1.1.0
-git push && git push --tags
-
-# CI가 자동으로 GitHub Release 생성
-# → 사용자는 discovery-skills update 로 수신
-```
-
-## For Users
+## Install
 
 이 레포를 직접 사용하지 않습니다. CLI를 설치하세요:
 
