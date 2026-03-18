@@ -1,0 +1,10 @@
+[metadata]
+repo = "yeojinsoo/discovery-skills-registry"
+
+[skills.logical-analysis]
+version = "1.0.0"
+description = "개념이나 시스템을 논리적으로 완전 해체하는 분석 스킬"
+
+[skills.project-planner]
+version = "1.0.0"
+description = "실행 계획 생성/실행/수정 통합 스킬"
