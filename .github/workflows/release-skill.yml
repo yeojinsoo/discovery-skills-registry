@@ -34,6 +34,7 @@ jobs:
       - name: Package skill
         run: |
           tar -czf "${{ steps.parse.outputs.skill_name }}-${{ steps.parse.outputs.version }}.tar.gz" \
+            --exclude='CHANGELOG.md' \
             -C "skills/${{ steps.parse.outputs.skill_name }}" .
 
       - name: Create Release
