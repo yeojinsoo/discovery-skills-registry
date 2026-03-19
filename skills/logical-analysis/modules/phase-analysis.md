@@ -1,6 +1,6 @@
 # Phase 0~1: 시스템 위상 분석 + 구성요소 심층 분석
 
-> **SOT**: 이 파일은 Phase A(project-planner) / Phase 1(logical-analysis)의 방법론 단일 진실 원천이다. Phase 0(시스템 위상 분석)도 포함한다.
+> **SOT**: 이 파일은 Phase A(spec-agent) / Phase 1(logical-analysis)의 방법론 단일 진실 원천이다. Phase 0(시스템 위상 분석)도 포함한다.
 > **목적**: Phase 0에서 식별된 각 구성요소(또는 단일 개념 자체)를 지정된 깊이까지 해체한다.
 
 ---

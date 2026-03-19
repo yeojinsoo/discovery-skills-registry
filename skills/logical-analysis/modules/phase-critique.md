@@ -1,6 +1,6 @@
 # Phase 2: 다관점 에이전트 팀 비판 (Multi-Perspective Critique)
 
-> **SOT**: 이 파일은 Phase C(project-planner) / Phase 2(logical-analysis)의 방법론 단일 진실 원천이다.
+> **SOT**: 이 파일은 Phase C(spec-agent) / Phase 2(logical-analysis)의 방법론 단일 진실 원천이다.
 > **목적**: Phase 1의 구조를 복수의 독립된 관점으로 비판하고, 관점 간 충돌을 통해 단일 관점에서는 보이지 않는 약점을 드러낸다.
 
 ---
