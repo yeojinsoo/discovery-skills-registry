@@ -12,6 +12,8 @@
 | §8 CRG | 이 파일 내 인라인 (§8) | CRG 프로토콜 |
 | §9-2 세션 | `rules/session-log-conventions.md §2 (스키마) + §7 (ID 부여)` | 세션 레코드 스키마 (공유 SOT) |
 | §3 이력 | `rules/session-log-conventions.md §3-4` | gate_decision 스키마 (공유 SOT) |
+| §6e 검증 판정 | `references/test-verification-guide.md` | 6상태 판정 체계, 브라우저 4계층 패턴, 실패 유형 3분류 |
+| §6e L1 회귀 | `rules/regression-test-strategy.md` §2 | Oracle 기반 회귀 검사 (Verifier Phase 1 선행 단계) |
 
 ### StateGraph
 
@@ -232,11 +234,22 @@ PLAN.md 상태 `PLANNED` → `IN_PROGRESS`.
 - 내부에서 3개 관점을 순차 적용:
 
 ### Phase 1 — Tester 관점
+
+- **L1 회귀 검사** (선행 단계 — `rules/regression-test-strategy.md` §2 참조):
+  - sessions.jsonl에서 이전 라운드 PASS 서브태스크 목록 수집. 없으면(첫 서브태스크) skip
+  - 각 PASS 서브태스크의 Oracle을 PLAN.md Predicate/Oracle 테이블에서 추출하여 재실행
+  - Stateful Prerequisites를 가진 Oracle은 skip (재실행 불가 — 환경 의존)
+  - 1건 이상 FAIL → 현재 서브태스크 FAIL 처리 + 회귀 원인을 Phase 2에 전달
+  - 전부 PASS → 현재 서브태스크 검증으로 진행
+
 - **Prerequisites 확인**: Oracle 실행 전, 테이블의 Prerequisites 열을 확인.
   - "—"이면 즉시 Oracle 실행
   - Safe Prerequisites (빌드, 컴파일 등 부작용 없는 명령) → Verifier가 직접 실행 후 Oracle 실행
   - Stateful Prerequisites (마이그레이션 적용, 서비스 시작 등 상태 변경) → Verifier 실행 불가. blocker로 반환: "Prerequisites 미충족: {조건}. Worker에서 먼저 실행 필요"
-- Predicate/Oracle을 실행하여 pass/fail 판정
+- **6상태 판정**: Predicate/Oracle 실행 결과를 `references/test-verification-guide.md` §1의 6상태(PASS/FAIL/PARTIAL/NOT_COVERED/UNCERTAIN/TIMED_OUT) 중 하나로 판정. 단순 pass/fail 이진 판정 금지 — PARTIAL, NOT_COVERED, UNCERTAIN, TIMED_OUT 해당 시 정확한 상태를 부여
+- **브라우저/Visual 테스트 (Test-Type이 browser 또는 visual인 서브태스크 한정)**:
+  - `references/test-verification-guide.md` §2 브라우저 4계층 패턴(구조→상태→상호작용→시각) 참조. 하위 계층에서 판정 가능하면 상위로 올리지 않는다
+  - Transient DOM 요소(Toast, 스피너 등)는 §2 Transient DOM 관측 창 패턴 적용 — `browser_wait_for` 후 즉시 캡처/판정
 - knowledge.jsonl의 기존 pitfall/constraint를 테스트 전략에 반영
 - 이전에 false-positive가 발생한 Oracle 패턴을 인지하고 보강
 
@@ -334,7 +347,12 @@ PLAN.md 상태 `PLANNED` → `IN_PROGRESS`.
 #### 6f. blocker 처리
 
 - blocker 0건 → `[ ]` → `[x]` 전환
-- blocker 존재 → 워커 재호출 시 검증자의 수정안 + 이전 blocker를 워커 프롬프트에 포함하여 6d~6e 재실행. 서브태스크당 최대 5회.
+- blocker 존재 → **실패 유형 3분류** (`references/test-verification-guide.md` §4 참조)로 원인을 진단한 후 유형별 후속 액션 분기:
+  - **구현 실패**: 코드가 Predicate 미충족 → 워커 재호출 (수정안 + 이전 blocker 포함하여 6d~6e 재실행)
+  - **테스트 실패**: 구현은 정상이나 Predicate/Oracle이 부정확 → AskUserQuestion: "[1] Oracle 수정 후 재검증 [2] 건너뛰기"
+  - **스펙 실패**: Predicate 자체가 달성 불가능 → AskUserQuestion: "[1] /project-planner update로 스펙 수정 [2] 건너뛰기"
+  - **분류 불가**: 위 3유형에 해당하지 않음 → AskUserQuestion으로 HITL 에스컬레이션
+  서브태스크당 최대 5회.
   - **슬라이딩 윈도우**: Worker에는 직전 라운드(N-1)의 blocker + 수정안만 주입. 라운드 1~N-2 정보는 "이전 {N-2}라운드에서 해결된 blocker: {건수}건" 1줄 요약으로 대체. Verifier에는 수렴 분석(Oscillation N vs N-2 비교)을 위해 직전 2라운드(N-1, N-2)의 blocker를 유지하되, 그 이전은 건수 요약으로 대체.
 - **조기 stagnation 감지**: 재시도 3회+ + 동일 blocker 2회 연속 → 전략 전환 렌즈 적용:
   - **Simplifier**: 더 작은 단위로 분해
@@ -421,10 +439,12 @@ Z는 "미검증 영역 목록" 출력 시, 변경된 코드에 대해 다음 항
 
 설정 파일만 변경하는 플랜 등 해당 없는 항목은 "해당 없음"으로 생략한다.
 
-**warning 발행 시 필수 포함 필드**: CRG 에이전트(X/Y/Z)가 warning severity 이슈를 발행할 때, 각 warning에 다음 3필드를 함께 출력한다:
+**warning 발행 시 필수 포함 필드**: CRG 에이전트(X/Y/Z)가 warning severity 이슈를 발행할 때, 각 warning에 다음 3필드를 함께 출력한다. 이 필드는 오케스트레이터가 §8-2 Conditional PASS Step A에서 사용자에게 텍스트 출력할 때 그대로 전달된다:
 - **원인**: 왜 발생했는가 (1줄)
 - **수정**: 무엇을 어떻게 바꾸는가 (1줄)
 - **이점**: 수정 전 대비 무엇을 얻는가 (1줄)
+
+에이전트별 도구 권한:
 - X: 읽기 + 빌드/테스트 명령 실행 권한 (Bash, Grep, Read)
 - Y: 읽기 전용 (Read, Grep, Glob)
 - Z: 읽기 + diff 분석 (Read, Grep, Glob, Bash — git diff만 허용)
@@ -455,24 +475,51 @@ Z는 "미검증 영역 목록" 출력 시, 변경된 코드에 대해 다음 항
 
 > severity 체계는 서브태스크 Verifier와 CRG에서 동일하다 (blocker/warning/note). 스코프만 다르다 — Verifier는 단일 서브태스크, CRG는 전체 플랜.
 
-**Conditional PASS 처리**: warning만 존재 시, 각 warning에 대해 의사결정 보조 정보를 제시한 후 사용자에게 선택지를 제공한다.
+**Conditional PASS 처리 (2-step 필수)**:
 
-**warning 보고 형식** (CRG 에이전트가 warning 발행 시 필수 포함):
+warning만 존재 시, **반드시 2단계로 분리하여 실행**한다. AskUserQuestion 하나에 모든 것을 요약하는 것은 금지.
+
+**Step A — warning 상세 출력 (텍스트 출력, AskUserQuestion 아님)**:
+오케스트레이터가 X/Y/Z 에이전트의 warning을 종합하여 아래 형식으로 **사용자에게 직접 텍스트 출력**한다:
+
 ```
+CRG 판정: Conditional PASS
+
 ⚠️ warning {N}건:
 
-[W1] {대상}: {이슈 1줄}
+[W1] {출처 에이전트} — {대상}: {이슈 1줄}
   원인: {왜 발생했는가 — 1줄}
   수정: {무엇을 어떻게 바꾸는가 — 1줄}
   이점: {수정 전 대비 무엇을 얻는가 — 1줄}
 
-[W2] ...
+[W2] {출처 에이전트} — {대상}: {이슈 1줄}
+  원인: ...
+  수정: ...
+  이점: ...
+
+...
+
+📝 note {M}건:
+- [N1] {내용 1줄}
+- [N2] {내용 1줄}
+...
 ```
 
-**선택지**:
-- [1] "인지하고 진행" → PASS로 기록 (warning 내용은 sessions.jsonl `notes`에 포함)
+> note는 1줄 요약으로 충분. warning은 반드시 원인/수정/이점 3필드를 포함.
+
+**Step B — AskUserQuestion (Step A 출력 완료 후)**:
+Step A의 텍스트가 사용자에게 표시된 후, AskUserQuestion을 호출한다. AskUserQuestion 본문에는 warning 내용을 반복하지 않고 선택지만 제시한다:
+
+```
+위 warning/note를 확인 후 선택하세요:
+```
+
+선택지:
+- [1] "인지하고 진행" (Recommended) → PASS로 기록 (warning 내용은 sessions.jsonl `notes`에 포함)
 - [2] "warning 항목만 수정" → warning 목록을 워커에게 전달 → 수정 → CRG 재실행 (CRG 사이클 카운트에 포함, 플랜 재설계/재실행 불필요)
 - [3] "수정 필요 (전체)" → NEEDS_FIX와 동일 수정 사이클 (플랜 재설계 + 재실행)
+
+> **왜 2-step인가**: AskUserQuestion에 warning 상세를 포함하면, UI에서 요약으로 축약되어 사용자가 의사결정에 필요한 정보를 볼 수 없다. 텍스트 출력은 전체가 표시되므로, 상세 정보는 반드시 Step A에서 텍스트로 출력한다.
 
 #### 8-3. 수정 사이클 (Fix Cycle)
 

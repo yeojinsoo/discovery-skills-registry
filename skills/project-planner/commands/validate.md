@@ -10,6 +10,7 @@
 | §3 collect_evidence | `rules/knowledge-conventions.md §3` | Knowledge 스키마 (공유 SOT) |
 | §9 write_report | `rules/history-file-conventions.md` | history.jsonl 스키마 (공유 SOT) |
 | §11 compose_findings + write_context_file | SKILL.md `resolve_next_filename` + `write_context_file` + `GATE-TO-CREATE_OR_UPDATE` | 공유 유틸리티 (SOT 유지) |
+| §4 Phase A 회귀 검사 | `rules/regression-test-strategy.md` §4 (L3) | 3계층 회귀 테스트 전략 — Knowledge 기반 회귀 |
 
 ### StateGraph
 
@@ -88,6 +89,25 @@ R-ID별로 관련 코드를 Read/Grep으로 확인하여 구현 증거를 수집
 3. 구현이 의도와 다르게 동작할 수 있는 조건
 4. 회귀 리스크 (기존 기능 영향)
 
+**회귀 검사 Sub-Phase** (비판 패스 완료 후 실행):
+
+> 이 스텝에서 `rules/regression-test-strategy.md` §4 (L3 — Knowledge 기반 회귀) 참조
+
+1. `${KNOW_FILE}`에서 `cat:"pitfall"` 또는 `cat:"constraint"` 태그를 포함하는 레코드를 수집
+2. 각 레코드의 내용을 현재 R-ID의 코드 증거와 대조하여 재발 여부 확인:
+   - 해당하지 않음 → skip
+   - 해당하나 재발 없음 → 회귀 없음
+   - 동일 패턴 재발 → **재발 감지** — 해당 R-ID에 warning 추가
+3. 결과를 Phase A 비판 결과에 포함:
+
+```
+### Pitfall/Constraint 재발 검사 (L3)
+
+| K-ID | 요약 | cat | 재발 여부 | 관련 R-ID | 근거 |
+|:---:|---|---|:---:|:---:|---|
+| {K-NNN} | {요약} | pitfall/constraint | Y/N | {R-ID} | {현재 코드에서의 근거} |
+```
+
 ### 5. Phase C — 다관점 검증 (Agent 분리 실행)
 
 `analytical-method.md` Phase C + `references/phase-c-agent-protocol.md` 프로토콜에 따라 4-step 구조로 실행하되, 코드 검증 맥락에 맞게 적응한다.
@@ -138,6 +158,20 @@ validate에서는 R2-a~R2-g 전체 범위를 작성한다 (`analytical-method.md
 - **NOT_ACHIEVED**: 1개 이상 ❌
 
 확신도 선언 (높음/중간/낮음 + 근거). `analysis-profiles.md` validate 프로파일의 확신도 판정 적용 규칙을 따른다.
+
+#### Invariant 침범 판정 하향 규칙
+
+PLAN.md Scope Boundary에서 `IN (Invariant)`로 지정된 항목이 Phase A 회귀 검사 또는 Phase C에서 침범이 확인된 경우, 해당 Invariant와 연관된 R-ID의 판정을 다음과 같이 하향한다:
+
+| 기존 판정 | 하향 판정 | 조건 |
+|:---:|:---:|---|
+| ACHIEVED | **PARTIAL** | Invariant 침범이 코드 증거로 확인됨 |
+| PARTIAL | PARTIAL (유지) | 이미 PARTIAL 이하이므로 추가 하향 없음 |
+
+하향 시 판정 근거에 다음을 명시한다:
+- 침범된 Invariant 항목명
+- 침범 증거 (diff 또는 코드 위치)
+- 원래 판정 및 하향 사유
 
 #### Phase C 합의 검토 의무
 

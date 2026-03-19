@@ -307,7 +307,17 @@ AskUserQuestion으로 IN/OUT 분류 확인.
   - FULL 모드: 전체 Gate 기준 검증
 
 1. 각 설계 원칙의 Testability 판정 (Yes/Partial/No)
-2. SPEC-to-TEST 매트릭스 작성 (R-ID + 보강 경로 열 포함): 모든 IN 항목 → COVERED 필수
+1-A. **Test-Type 분류**: 각 Predicate/Oracle 쌍에 대해 테스트 유형을 분류한다.
+
+   | Test-Type | 설명 | 예시 |
+   |-----------|------|------|
+   | unit | 단위 함수/메서드 레벨 검증 | jest, pytest 단위 테스트 |
+   | api | HTTP/gRPC 등 API 엔드포인트 검증 | curl, supertest, REST client |
+   | browser | 브라우저 기반 UI/E2E 검증 | Playwright, Cypress |
+   | visual | 스크린샷/스냅샷 비교 검증 | Percy, Chromatic |
+   | db | 데이터베이스 상태/스키마 검증 | SQL 쿼리, migration 확인 |
+
+2. SPEC-to-TEST 매트릭스 작성 (R-ID + Test-Type + 보강 경로 열 포함): 모든 IN 항목 → COVERED 필수
 3. **R-ID 기반 기계적 커버리지 검증**:
    ```
    R_all = {PROBLEM.md §3의 모든 R-ID} − {G2에서 OUT으로 분리된 R-ID}
@@ -388,10 +398,10 @@ _(없음 — 사용자 입력 기반 생성)_
 
 ### SPEC-to-TEST 매트릭스
 
-| R-ID | SPEC IN 항목 | 검증 서브태스크 | Oracle 등급 | 보강 경로 | 커버리지 |
-|:----:|-------------|--------------|:-----------:|----------|:-------:|
-| R-1 | {IN 항목} | {S1, S2...} | Strong | — | COVERED |
-| R-2 | {IN 항목} | {S3} | Weak | {추가 검증 명령} | COVERED |
+| R-ID | SPEC IN 항목 | 검증 서브태스크 | Oracle 등급 | Test-Type | 보강 경로 | 커버리지 |
+|:----:|-------------|--------------|:-----------:|:---------:|----------|:-------:|
+| R-1 | {IN 항목} | {S1, S2...} | Strong | unit | — | COVERED |
+| R-2 | {IN 항목} | {S3} | Weak | api | {추가 검증 명령} | COVERED |
 
 ---
 
@@ -423,9 +433,9 @@ ACCEPT iff S1 ∧ S2 ∧ ... ∧ SN
 
 **Action**: {수행 절차}
 
-| Predicate | Oracle | Prerequisites | R-ID |
-|-----------|--------|---------------|:----:|
-| {상태 서술} | {검증 명령} | {Oracle 실행 전 충족 조건. 없으면 "—"} | R-1 |
+| Predicate | Oracle | Prerequisites | Test-Type | R-ID |
+|-----------|--------|---------------|:---------:|:----:|
+| {상태 서술} | {검증 명령} | {Oracle 실행 전 충족 조건. 없으면 "—"} | unit/api/browser/visual/db | R-1 |
 
 ---
 
@@ -445,7 +455,7 @@ S2 ──┘
 ```
 
 구성 항목:
-- Section 0: Contract (§3 추적 R-ID 명시) + Scope + SPEC-TEST (R-ID 열 포함) + 설계 원칙
+- Section 0: Contract (§3 추적 R-ID 명시) + Scope + SPEC-TEST (R-ID + Test-Type 열 포함) + 설계 원칙
 - Acceptance Gate: `ACCEPT iff S1 ∧ S2 ∧ ...`
 - Subtasks: 각각 Predicate + Oracle + R-ID 테이블 + Action
 - 의존성 그래프 (ASCII DAG)
@@ -477,6 +487,7 @@ build_plan 완료 후, PLAN.md 필수 구조를 기계적으로 검증한다:
 | 비결정론 격리 매트릭스 존재 | grep: "## 비결정론 격리" |
 | 의존성 DAG 존재 | grep: "## 의존성 그래프" |
 | Prerequisites 열 존재 | 서브태스크 Predicate/Oracle 테이블에 "Prerequisites" 열 존재 확인 |
+| Test-Type 열 존재 | SPEC-to-TEST 매트릭스 테이블에 "Test-Type" 열 존재 확인 |
 
 검증 결과: 모두 통과 → GATE-FINAL 진행 / 1개+ 실패 → AskUserQuestion
 

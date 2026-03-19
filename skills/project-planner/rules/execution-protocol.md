@@ -14,7 +14,7 @@
 |------|----------|------|------|------|
 | **오케스트레이터** (메인) | 직접 | progress.md, PLAN.md, knowledge | 워커/검증자 프롬프트, progress.md 갱신 | Read, Write, Edit, Agent |
 | **워커** (구현) | Agent tool | Action + key_decisions + warnings + knowledge | 구조화된 결과 요약 (5~10줄) | Read, Write, Edit, Bash, Grep, Glob |
-| **검증자** (A+B+C 통합) | Agent tool | Predicate/Oracle + worker_result + knowledge | PASS/FAIL + 이슈 + knowledge/sessions 레코드 | Bash, Read, Grep, Glob |
+| **검증자** (A+B+C 통합) | Agent tool | Predicate/Oracle + worker_result + knowledge + sessions | 6상태 판정 + 이슈 + knowledge/sessions 레코드 | Bash, Read, Grep, Glob |
 
 ### 핵심 원칙
 
@@ -40,7 +40,7 @@
 
 | Agent | 역할 | 입력 | 출력 | 판단 기준 |
 |:-----:|------|------|------|----------|
-| **A — Tester** | Predicate + Oracle을 실행하여 pass/fail 판정. `knowledge.jsonl`의 기존 교훈을 참조하여 이전에 실패했던 패턴을 사전 회피 | 실행 계획, 코드베이스, `knowledge.jsonl` | 서브태스크별 pass/fail 결과 + 실패 로그 | Oracle이 true를 반환하는가 |
+| **A — Tester** | Predicate + Oracle을 실행하여 6상태 판정(`references/test-verification-guide.md` §1). `knowledge.jsonl`의 기존 교훈을 참조하여 이전에 실패했던 패턴을 사전 회피. 이전 PASS Oracle 회귀 검사(`rules/regression-test-strategy.md` §2) | 실행 계획, 코드베이스, `knowledge.jsonl`, `sessions.jsonl` | 서브태스크별 6상태 판정(PASS/FAIL/PARTIAL/NOT_COVERED/UNCERTAIN/TIMED_OUT) + 실패 로그 | Oracle 조건 충족 여부 + 이전 PASS 보존 여부 |
 | **B — Reviewer** | A의 실행 결과를 비판적으로 검토. `knowledge.jsonl`의 기존 교훈을 참조하여 기존 교훈이 위반된 경우 severity를 상향 | A의 결과 리포트, `knowledge.jsonl` | 이슈 목록 (severity: blocker/warning/note) | 테스트가 Predicate의 의도를 충실히 검증했는가 |
 | **C — Observer** | A+B의 논의를 종합하여 수정안 제시 + 지식 축적 판별 | A 결과 + B 이슈 목록, `knowledge.jsonl` | (1) 수정 제안서 + (2) `knowledge.jsonl` append 레코드 | 수정안이 B의 blocker를 해소하는가 |
 
@@ -48,7 +48,7 @@
 
 오케스트레이터-워커 모드에서도 3-Agent의 핵심 관점은 보존된다:
 
-1. **Tester 관점**: 검증자 내부 Phase 1에서 Predicate/Oracle 실행
+1. **Tester 관점**: 검증자 내부 Phase 1에서 L1 회귀 검사(선행) + Predicate/Oracle 6상태 판정
 2. **Reviewer 관점**: 검증자 내부 Phase 2에서 비판적 검토 + severity 분류
 3. **Observer 관점**: 검증자 내부 Phase 3에서 수정안 + 수렴 분석 + knowledge/sessions 기록
 

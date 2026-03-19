@@ -1,6 +1,6 @@
 ---
 name: project-planner
-description: "실행 계획 생성/실행/수정 통합 스킬. 프로젝트 플랜 데이터를 스킬 내부(${CLAUDE_SKILL_DIR}/repos/)에 저장하여 레포 무관 재사용 가능. /project-planner context [name] — create 전 문제 구체화, /project-planner create [name] — 신규 생성, /project-planner exec [name] — 실행, /project-planner update [name] — 수정, /project-planner validate [name] — DoD 검증, /project-planner summary — PR 본문 생성/조회/수정. 이 스킬은 사용자가 명시적으로 \"/project-planner\" 커맨드를 입력했을 때만 실행한다. 자연어 요청으로는 트리거하지 않는다."
+description: "실행 계획 생성/실행/수정 통합 스킬. 프로젝트 플랜 데이터를 스킬 내부(${CLAUDE_SKILL_DIR}/repos/)에 저장하여 레포 무관 재사용 가능. /project-planner context [name] — create 전 문제 구체화, /project-planner create [name] — 신규 생성, /project-planner exec [name] — 실행, /project-planner update [name] — 수정, /project-planner validate [name] — DoD 검증, /project-planner summary — PR 본문 생성/조회/수정, /project-planner status — 프로젝트 현황 조회. 이 스킬은 사용자가 명시적으로 \"/project-planner\" 커맨드를 입력했을 때만 실행한다. 자연어 요청으로는 트리거하지 않는다."
 allowed-tools:
   - Read
   - Write
@@ -15,7 +15,7 @@ allowed-tools:
 
 # project-planner
 
-컨텍스트(context), 생성(create), 실행(exec), 수정(update), 검증(validate), PR 본문(summary)을 단일 스킬로 처리한다.
+컨텍스트(context), 생성(create), 실행(exec), 수정(update), 검증(validate), PR 본문(summary), 현황 조회(status)를 단일 스킬로 처리한다.
 모든 프로젝트 플랜 데이터는 `${PLAN_DIR}`에 저장된다. 레포에 파일을 남기지 않아 어느 프로젝트에서도 동일하게 동작한다.
 
 ## 경로 상수 (스킬 전체에서 사용)
@@ -45,7 +45,7 @@ VALIDATION_DIR = ${PROJ_DIR}/validations/
 > **분류 기준**: `rules/` = 서브커맨드 실행 시 반드시 읽는 규범 (스키마, 프로토콜, 품질 기준). `references/` = 워크플로우 진행 중 필요 시 참조하는 보조 문서 (템플릿, 체크리스트, 가이드).
 > 이 테이블에 없는 파일이 rules/ 또는 references/ 에 존재하면 고아(orphan)이므로 삭제 또는 이동한다.
 
-### rules/ (8개)
+### rules/ (9개)
 
 | 규칙 | 파일 | 참조 서브커맨드 |
 |------|------|:-------------:|
@@ -57,8 +57,9 @@ VALIDATION_DIR = ${PROJ_DIR}/validations/
 | CRG 프로토콜 | `rules/critical-review-gate.md` | §EXEC |
 | history.jsonl 규약 | `rules/history-file-conventions.md` | §CREATE, §EXEC, §UPDATE, §SUMMARY, §VALIDATE |
 | 분석 방법론 | `rules/analytical-method.md` | §VALIDATE, §SUMMARY |
+| 3계층 회귀 테스트 전략 | `rules/regression-test-strategy.md` | §EXEC, §VALIDATE |
 
-### references/ (8개)
+### references/ (9개)
 
 | 참조 문서 | 파일 | 참조 서브커맨드 |
 |----------|------|:-------------:|
@@ -70,12 +71,13 @@ VALIDATION_DIR = ${PROJ_DIR}/validations/
 | 정합성 검증 | `references/consistency-guide.md` | §UPDATE |
 | 분석 프로파일 | `references/analysis-profiles.md` | §VALIDATE, §SUMMARY |
 | Phase C 에이전트 프로토콜 | `references/phase-c-agent-protocol.md` | §VALIDATE |
+| 테스트 검증 방법론 | `references/test-verification-guide.md` | §EXEC |
 
 ---
 
 ## Step 0 — parse_args + 환경 감지
 
-모든 서브커맨드 실행 전 공통 수행.
+모든 서브커맨드 실행 전 공통 수행. 단, `status`는 0-1 직후 조기 라우팅된다 (§0-1-1 참조).
 
 ### 0-1. 전체 args 선파싱 (플래그 먼저 추출)
 
@@ -89,6 +91,15 @@ $ARGUMENTS 전체에서 플래그를 우선 추출:
 - `create`, `exec`, `update`, `validate` → plan_name으로 파싱
 - `context` → slug (컨텍스트 파일 이름)로 파싱. plan_name 아님.
 - `summary` → 나머지 args 전체를 §SUMMARY 내부 라우터에 그대로 전달 (plan_name 파싱 안 함)
+- `status` → 추가 인자 없음 (잉여 인자는 무시). --repo, --project 플래그만 유효. §0-1-1에서 조기 라우팅.
+
+### 0-1-1. status 조기 라우팅
+
+subcmd가 `status`이면 **즉시** Read(`${CLAUDE_SKILL_DIR}/commands/status.md`)를 로드하고 §STATUS의 Step 0-S를 실행한다.
+Step 0-2 이후(repo_slug 감지, project_name 감지, 디렉토리 초기화)는 실행하지 않는다.
+
+> 이유: status는 읽기 전용 커맨드로, 감지 실패 시 안내 메시지 후 종료해야 하며 디렉토리를 생성해서는 안 된다.
+> 공유 Step 0-2~0-4는 에러 종료 및 mkdir을 수행하므로 status의 시맨틱스와 충돌한다.
 
 예시:
   "create my-plan --project AG-1614"
@@ -170,7 +181,8 @@ PROJ_DIR = ${REPO_DIR}/projects/{project_name}/
 - update   → Read(`${CLAUDE_SKILL_DIR}/commands/update.md`) → 로드된 §UPDATE 워크플로우 실행
 - validate → Read(`${CLAUDE_SKILL_DIR}/commands/validate.md`) → 로드된 §VALIDATE 워크플로우 실행
 - summary  → Read(`${CLAUDE_SKILL_DIR}/commands/summary.md`) → 로드된 §SUMMARY 워크플로우 실행 (나머지 args를 §SUMMARY 내부 라우터에 전달; plan_name 파싱 안 함)
-- 기타     → "사용법: /project-planner [context|create|exec|update|validate|summary] [plan-name]
+- status   → Read(`${CLAUDE_SKILL_DIR}/commands/status.md`) → 로드된 §STATUS 워크플로우 실행 (읽기 전용; Step 0-S 자체 환경 감지 사용)
+- 기타     → "사용법: /project-planner [context|create|exec|update|validate|summary|status] [plan-name]
               옵션: --project {name}, --repo {slug}, --seed {context-file}, --plan {name}"
 
 ---

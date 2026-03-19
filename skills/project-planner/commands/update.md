@@ -138,6 +138,7 @@ apply_changes 완료 후, PLAN.md 필수 구조를 기계적으로 검증한다 
 | 비결정론 격리 매트릭스 존재 | grep: "## 비결정론 격리" |
 | 의존성 DAG 존재 | grep: "## 의존성 그래프" |
 | Prerequisites 열 존재 | 서브태스크 Predicate/Oracle 테이블에 "Prerequisites" 열 존재 확인 |
+| Test-Type 열 존재 | SPEC-to-TEST 매트릭스 테이블에 Test-Type 열 존재 확인 |
 
 검증 결과: 모두 통과 → re_verify 진행 / 1개+ 실패 → 수정 후 재검증.
 
