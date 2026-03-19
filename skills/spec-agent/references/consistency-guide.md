@@ -37,11 +37,11 @@ Gate 서브태스크 중 Contract IN에 대응하지 않는 것이 있는가?
 - 서브태스크 Predicate/Oracle 테이블에 Prerequisites 열이 존재하는가?
 
 **갱신 절차**:
-1. PLAN.md 체크리스트에서 현재 서브태스크 ID 전체 추출
+1. SPEC.md 체크리스트에서 현재 서브태스크 ID 전체 추출
 2. 기존 Gate 공식 (`ACCEPT iff S1 ∧ S2 ∧ ...`)에서 변수 목록 추출
 3. 차이 비교: (추가된 ID = 체크리스트에 있으나 Gate에 없음) / (삭제된 ID = Gate에 있으나 체크리스트에 없음)
 4. Gate 공식 재작성: 추가 ID 포함, 삭제 ID 제거
-5. 재작성 결과를 PLAN.md Acceptance Gate 섹션에 반영
+5. 재작성 결과를 SPEC.md Acceptance Gate 섹션에 반영
 
 ### 8. 의존성 그래프(DAG)
 - 서브태스크 추가/삭제 시 DAG 갱신

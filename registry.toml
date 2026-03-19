@@ -6,8 +6,8 @@ version = "1.0.0"
 content_hash = "6076fa69d9a4a0b67f8432905b673b3dc5779be759ed889bd4219c61b53d56bd"
 description = "개념이나 시스템을 논리적으로 완전 해체하는 분석 스킬"
 
-[skills.project-planner]
-version = "1.1.0"
-content_hash = "b78e116a4fb74444b7224bb3634266d6db37ee3260c4e0d29416f2b37532cf54"
+[skills.spec-agent]
+version = "0.1.0"
+content_hash = "784448cf26956698dfda551a5db1f5390557f28750f4f5177016e5fb9c958b85"
 depends_on = [{ name = "logical-analysis", ref_version = "1.0.0" }]
-description = "실행 계획 생성/실행/수정 통합 스킬"
+description = "실행 스펙 생성/실행/수정 통합 스킬"

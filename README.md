@@ -8,7 +8,7 @@
 registry.toml              # 스킬 메타데이터 (이름, 버전, 설명)
 skills/
   logical-analysis/        # 논리적 해체 분석 스킬
-  project-planner/         # 실행 계획 생성/실행/수정 스킬
+  spec-agent/              # 실행 스펙 생성/실행/수정 스킬
 .github/workflows/
   release-skill.yml        # 스킬별 독립 릴리스 CI
 ```
@@ -23,9 +23,9 @@ repo = "yeojinsoo/discovery-skills-registry"
 version = "1.0.0"
 description = "개념이나 시스템을 논리적으로 완전 해체하는 분석 스킬"
 
-[skills.project-planner]
-version = "1.0.0"
-description = "실행 계획 생성/실행/수정 통합 스킬"
+[skills.spec-agent]
+version = "0.1.0"
+description = "실행 스펙 생성/실행/수정 통합 스킬"
 ```
 
 ## Install

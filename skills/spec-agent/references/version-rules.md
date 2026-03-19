@@ -1,18 +1,18 @@
-# Version Rules — 프로젝트 플랜 변경 버전 관리
+# Version Rules — 실행 스펙 변경 버전 관리
 
 ## 변경 추적 원칙
 
-- PLAN.md / PROBLEM.md는 git 이력으로 버전 추적
+- SPEC.md / PROBLEM.md는 git 이력으로 버전 추적
 - sessions.jsonl은 append-only (변경 이력 자체가 버전)
 - knowledge.jsonl도 append-only (`supersedes` 필드로 정정)
 
 ## 상태별 변경 허용 범위
 
-| 상태 | PROBLEM.md | PLAN.md 구조 | 체크리스트 | knowledge/sessions |
+| 상태 | PROBLEM.md | SPEC.md 구조 | 체크리스트 | knowledge/sessions |
 |------|:----------:|:-----------:|:---------:|:-----------------:|
 | PLANNED | 전체 수정 가능 | 전체 수정 가능 | 수정 가능 | append |
 | IN_PROGRESS | 조건부 HITL (update.md §2 참조) | cascade 규칙 적용 | `[x]` 전환만 | append |
-| DONE | 수정 불가 (새 프로젝트 플랜 생성) | 수정 불가 | 수정 불가 | append |
+| DONE | 수정 불가 (새 실행 스펙 생성) | 수정 불가 | 수정 불가 | append |
 | NEEDS_REVIEW | Contract/Scope 재설계만 허용 | AskUserQuestion 후 IN_PROGRESS 전환 | 수정 불가 | append |
 | ABANDONED | 수정 불가 | 수정 불가 | 수정 불가 | append |
 
@@ -27,13 +27,13 @@
 3. 영향받는 Gate 재검증
 4. 이미 완료(`[x]`)된 서브태스크가 영향받는 경우:
    - `[x]` → `[ ]` 되돌리기
-   - sessions.jsonl에 `aborted` 레코드 추가 (notes: "프로젝트 플랜 변경으로 인한 서브태스크 리셋")
+   - sessions.jsonl에 `aborted` 레코드 추가 (notes: "실행 스펙 변경으로 인한 서브태스크 리셋")
 5. 변경 적용 후 sessions.jsonl에 기록
 
-## DONE 프로젝트 플랜 변경
+## DONE 실행 스펙 변경
 
-DONE 프로젝트 플랜은 직접 수정하지 않는다:
-- 새 프로젝트 플랜을 생성하고 PROBLEM.md에 이전 프로젝트 플랜 참조
+DONE 실행 스펙은 직접 수정하지 않는다:
+- 새 실행 스펙을 생성하고 PROBLEM.md에 이전 실행 스펙 참조
 - 사용자 명시적 요청 시에만 `IN_PROGRESS`로 되돌린 후 변경
 
 ## 체크리스트 되돌리기 규칙

@@ -1,6 +1,6 @@
-# Cascade Map — 프로젝트 플랜 변경 전파 규칙
+# Cascade Map — 실행 스펙 변경 전파 규칙
 
-프로젝트 플랜 구성 요소 변경 시 하위 요소로 변경이 전파되는 규칙.
+실행 스펙 구성 요소 변경 시 하위 요소로 변경이 전파되는 규칙.
 
 ## 변경 전파 순서
 
@@ -15,7 +15,7 @@ PROBLEM → Contract → Scope → SPEC-TEST → Subtasks → Gate
 | 변경 지점 | 영향 범위 | 필수 재검증 |
 |-----------|----------|------------|
 | §1 증상 | §3 해결 조건 연동 확인 | G0 재판정 |
-| §2 원인 | [확인됨]↔[가설] 전환 시 VALIDATE 서브태스크 추가/제거 | G0 + build_plan |
+| §2 원인 | [확인됨]↔[가설] 전환 시 VALIDATE 서브태스크 추가/제거 | G0 + build_spec |
 | §3 해결 조건 | Contract → Scope → SPEC-TEST → 전체 | G1~G4 전체 |
 | Contract | Scope → SPEC-TEST → Subtasks → Gate | G2~G4 |
 | Scope IN 추가 | SPEC-TEST 매트릭스 COVERED 확인 → 서브태스크 추가 필요 | G3~G4 |

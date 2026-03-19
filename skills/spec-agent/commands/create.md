@@ -1,6 +1,6 @@
-## §CREATE — 신규 프로젝트 플랜 생성
+## §CREATE — 신규 실행 스펙 생성
 
-신규 프로젝트 플랜 생성 워크플로우를 실행한다.
+신규 실행 스펙 생성 워크플로우를 실행한다.
 
 ### Gate별 판정 기준 (인라인화됨)
 
@@ -8,7 +8,7 @@
 |------|------|------|
 | G0 | 이 파일 내 인라인 (§3) | Ambiguity Score 공식 + 채점 기준 |
 | G1~G4 | 이 파일 내 인라인 (§5~§8) | Contract/Scope/SPEC-TEST/정합성 |
-| 템플릿 | 이 파일 내 인라인 (§9) | PROBLEM.md/PLAN.md 템플릿 |
+| 템플릿 | 이 파일 내 인라인 (§9) | PROBLEM.md/SPEC.md 템플릿 |
 | 안티패턴 | 이 파일 내 인라인 (§5) | Contract 안티패턴 목록 |
 
 ### 공유 SOT (스텝별 참조)
@@ -23,30 +23,30 @@
 ```
 parse_input → name_validate → seed_select → context_load
   → G0(PROBLEM HITL)
-  → [Wicked?] → YES: wicked_plan(탐색 Contract) → G1 → ...
+  → [Wicked?] → YES: wicked_spec(탐색 Contract) → G1 → ...
               → NO: write_problem → G1(Contract) → G2(Scope) → G3(SPEC-TEST) → G4(Q1/Q2/Q3)
-  → build_plan → GATE-FINAL → write_artifacts → report
-  → GATE-AUTO-EXEC → [YES] invoke /project-planner exec {plan-name} --project {project_name} --repo {repo_slug}
+  → build_spec → GATE-FINAL → write_artifacts → report
+  → GATE-AUTO-EXEC → [YES] invoke /spec-agent exec {spec-name} --project {project_name} --repo {repo_slug}
 ```
 
 ### 1. parse_input — 사용자 입력 파싱
 
 사용자가 제공한 텍스트에서 다음을 추출:
-- 프로젝트 플랜 이름 후보 (또는 문제 설명에서 kebab-case 생성)
+- 실행 스펙 이름 후보 (또는 문제 설명에서 kebab-case 생성)
 - §1 증상 정보, §2 원인 정보, §3 해결 조건 정보
 - Contract/Scope 관련 힌트
 
 ### 2. name_validate — 이름 검증
 
 1. kebab-case 변환 (영문 소문자 + 하이픈)
-2. `ls "${PLANS_DIR}"` 로 기존 프로젝트 플랜 디렉토리 확인
+2. `ls "${SPECS_DIR}"` 로 기존 실행 스펙 디렉토리 확인
 3. 디렉토리가 이미 존재하는 경우:
-   - `PLAN.md`가 이미 있으면 → 이미 생성된 프로젝트 플랜 → AskUserQuestion: "[1] 다른 이름으로 생성 [2] 취소"
-   - 그 외 → 신규 프로젝트 플랜으로 진행
-4. PLAN_DIR 조기 생성 (G1~G4 gate_decision 기록을 위해):
+   - `SPEC.md`가 이미 있으면 → 이미 생성된 실행 스펙 → AskUserQuestion: "[1] 다른 이름으로 생성 [2] 취소"
+   - 그 외 → 신규 실행 스펙으로 진행
+4. SPEC_DIR 조기 생성 (G1~G4 gate_decision 기록을 위해):
    ```bash
-   mkdir -p "${PLAN_DIR}"
-   touch "${PLAN_DIR}/sessions.jsonl"
+   mkdir -p "${SPEC_DIR}"
+   touch "${SPEC_DIR}/sessions.jsonl"
    ```
 
 ### 2-0. seed_select — Seed Context 선택
@@ -68,7 +68,7 @@ ls "${CTX_DIR}" 2>/dev/null | grep -E '^[0-9]{3}-.*\.md$' | sort
     "[0] (없음 — 사용자 입력 기반으로 생성)
      [1] context/001-initial.md
      [2] context/002-team-review.md"
-  → AskUserQuestion: "이 프로젝트 플랜의 Seed Context를 선택하세요 (번호 입력):"
+  → AskUserQuestion: "이 실행 스펙의 Seed Context를 선택하세요 (번호 입력):"
   → 0 → seed_file = null
   → 1+ → seed_file 확정
 
@@ -80,7 +80,7 @@ ls "${CTX_DIR}" 2>/dev/null | grep -E '^[0-9]{3}-.*\.md$' | sort
 1. seed_file → seed_ctx (G0~G4 Primary Driver)
 2. 나머지 CTX_DIR 파일 (정렬순) → bg_ctx
 3. KNOW_FILE → knowledge_ctx
-4. PLANS_DIR/*/PLAN.md의 Section 0 + sessions.jsonl tail -1 → completed_plans_ctx
+4. SPECS_DIR/*/SPEC.md의 Section 0 + sessions.jsonl tail -1 → completed_specs_ctx
 
 Knowledge 표시 시 confidence 레벨 구분:
 - `[canonical]` — 검증된 교훈 (최우선 참조)
@@ -92,7 +92,7 @@ Knowledge 표시 시 confidence 레벨 구분:
 📌 Seed Context: context/003-api-design.md (또는 "없음 — 사용자 입력 기반")
 ⬜ Background Context (N개): context/001-*.md, context/002-*.md ...
 📚 Project knowledge: K-{N}건
-📋 완료 프로젝트 플랜 참조: ag-1614 (DONE), ag-1614-fixes (DONE)
+📋 완료 실행 스펙 참조: ag-1614 (DONE), ag-1614-fixes (DONE)
 ```
 
 반영 여부 추적 (기존 로직 유지, 단 경로를 CTX_DIR 기준으로):
@@ -149,7 +149,7 @@ Ambiguity = 1 − (symptom_clarity × 0.30 + cause_clarity × 0.30 + resolution_
 | **Cause Clarity** (§2) | 0.30 | [확인됨] + 근본 원인 + 확인 방법 | [가설] + 확인 방법 명시 | 원인 미상 + 확인 방법 없음 |
 | **Resolution Observability** (§3) | 0.40 | 상태 서술 + 검증 방법 + 산출물 명시 + R-ID 부여 | 상태 서술은 있으나 검증 방법 불명 | 절차 서술만 존재 |
 
-Resolution Observability가 최고 가중치인 이유: §3 해결 조건이 Contract Statement의 직접 입력이며, 전체 프로젝트 플랜 품질에 가장 크게 영향을 미친다.
+Resolution Observability가 최고 가중치인 이유: §3 해결 조건이 Contract Statement의 직접 입력이며, 전체 실행 스펙 품질에 가장 크게 영향을 미친다.
 
 **판정 흐름 — 2축 매트릭스**:
 
@@ -160,7 +160,7 @@ Resolution Observability가 최고 가중치인 이유: §3 해결 조건이 Con
 | 1개+ 불충분 | ≤ 0.5 | CLARIFY |
 | 1개+ 불충분 | > 0.5 | INSUFFICIENT |
 
-> **자기 채점 편향 주의**: 프로젝트 플랜 작성 에이전트가 자기 채점하므로, 경계 구간(0.15~0.25)에서는 보수적으로 CLARIFY 판정을 권고한다.
+> **자기 채점 편향 주의**: 실행 스펙 작성 에이전트가 자기 채점하므로, 경계 구간(0.15~0.25)에서는 보수적으로 CLARIFY 판정을 권고한다.
 
 **섹션별 판정 → 불충분 시 AskUserQuestion**:
 - §1 증상: "어떤 명령/경로를 실행하면 이 문제를 재현할 수 있나요?"
@@ -170,21 +170,21 @@ Resolution Observability가 최고 가중치인 이유: §3 해결 조건이 Con
 
 **MUST**: 각 Gate는 반드시 AskUserQuestion 도구를 호출한다.
 
-**원인 모름 처리**: §2를 `**[가설]** 원인 미상 — 조사 필요`로 기록하고 PLAN.md에 VALIDATE 서브태스크 자동 삽입.
+**원인 모름 처리**: §2를 `**[가설]** 원인 미상 — 조사 필요`로 기록하고 SPEC.md에 VALIDATE 서브태스크 자동 삽입.
 
 **Wicked Problem 판별** (0 hop):
 조건: §2 원인이 [가설]이고 §3에 "탐색 후 결정", "조사 결과에 따라", "원인 파악 후 판단" 등 포함
-→ AskUserQuestion: "[1] 탐색 프로젝트 플랜(Recommended) [2] 일반 프로젝트 플랜 강제 진행"
+→ AskUserQuestion: "[1] 탐색 실행 스펙(Recommended) [2] 일반 실행 스펙 강제 진행"
 → [1] 선택 시: Contract를 "탐색 계약"으로 전환 — 탐색 범위와 판단 기준만 명시
 
 ### 4. write_problem — PROBLEM.md 작성
 
-아래 PROBLEM.md 템플릿에 따라 작성. 저장: `${PLAN_DIR}/PROBLEM.md`
+아래 PROBLEM.md 템플릿에 따라 작성. 저장: `${SPEC_DIR}/PROBLEM.md`
 
 **PROBLEM.md 템플릿** (인라인):
 
 ```markdown
-# {plan-name} — Problem Definition
+# {spec-name} — Problem Definition
 
 ## 1. 증상
 {관찰 가능한 실패 현상}
@@ -204,9 +204,9 @@ Resolution Observability가 최고 가중치인 이유: §3 해결 조건이 Con
 - **수정 시**: {고치다가 뭐가 깨질 수 있는가}
 ```
 
-**섹션→PLAN 흐름**:
+**섹션→SPEC 흐름**:
 
-| 섹션 | 필수 | PLAN.md로의 흐름 |
+| 섹션 | 필수 | SPEC.md로의 흐름 |
 |------|:----:|-----------------|
 | §1 증상 + 재현 | 필수 | 재현 경로를 뒤집으면 Acceptance Gate Oracle |
 | §2 원인 + 확인/가설 | 필수 | [확인됨] → FIX→VERIFY. [가설] → VALIDATE→FIX→VERIFY |
@@ -255,7 +255,7 @@ Missing ≠ ∅ → G1 실패. 누락 R-ID를 Contract에 포함하거나 OUT으
 | 안티패턴 | 문제 | 수정 |
 |---------|------|------|
 | OUT 0개 | 경계 미설정 — 범위 무한 확장 위험 | 최소 1개 OUT 명시 |
-| "별도 계획 필요" (위임처 없음) | 위임처 불명 — 추적 불가 | 구체적 플랜 이름/시스템/"미정 — HITL" 기재 |
+| "별도 계획 필요" (위임처 없음) | 위임처 불명 — 추적 불가 | 구체적 스펙 이름/시스템/"미정 — HITL" 기재 |
 | IN에 비결정론 포함 | Acceptance Gate 침투 | Tier B로 격리 후 OUT 이동 |
 
 **4. SPEC-TEST 매트릭스 안티패턴**:
@@ -285,7 +285,7 @@ context의 `## 반요구사항 (Anti-Requirements)` 섹션이 존재하면, 각 
 
 | 반요구사항 유형 | Scope 매핑 | 예시 |
 |---------------|-----------|------|
-| 범위 제외 ("~안 다룸", "범위 밖") | **OUT** + 위임처 | "provider 통합 안 다룸" → OUT, 위임처: 별도 플랜 |
+| 범위 제외 ("~안 다룸", "범위 밖") | **OUT** + 위임처 | "provider 통합 안 다룸" → OUT, 위임처: 별도 스펙 |
 | 보존/불변 ("~유지", "~변경 금지") | **IN** (Invariant) | "기존 API 스키마 불변" → IN (Invariant) |
 
 분류가 모호한 경우(범위 제외인지 보존인지 불명확) → AskUserQuestion으로 사용자에게 확인.
@@ -352,14 +352,14 @@ Q2: Over_tested  = Predicate_R − Contract_R → ≠ ∅이면 실패
 
 G4 통과 시 `gate_decision` 레코드를 sessions.jsonl에 append.
 
-### 9. build_plan — PLAN.md 구성
+### 9. build_spec — SPEC.md 구성
 
-아래 PLAN.md 템플릿에 따라 구성:
+아래 SPEC.md 템플릿에 따라 구성:
 
-**PLAN.md 템플릿** (인라인):
+**SPEC.md 템플릿** (인라인):
 
 ```markdown
-# {plan-name} — Execution Plan
+# {spec-name} — Execution Spec
 
 > **버전**: v1.0 | **상태**: PLANNED | **최초 작성**: {YYYY-MM-DD}
 
@@ -368,7 +368,7 @@ G4 통과 시 `gate_decision` 레코드를 sessions.jsonl에 append.
 ## Context Sources
 
 <!-- Seed 있는 경우 -->
-- [x] **context/003-api-design.md ← Seed** (이 프로젝트 플랜의 기반)
+- [x] **context/003-api-design.md ← Seed** (이 실행 스펙의 기반)
 - [x] context/001-initial.md (배경 참조)
 - [ ] context/004-new-constraint.md  ← 미반영 (update 대상)
 
@@ -381,7 +381,7 @@ _(없음 — 사용자 입력 기반 생성)_
 
 ### Contract Statement
 
-이 프로젝트 플랜은 {입력}을 받아 {출력}을 생산한다.
+이 실행 스펙은 {입력}을 받아 {출력}을 생산한다.
 
 **§3 추적**: R-1, R-2, ... → 이 Contract가 커버하는 PROBLEM.md §3 R-ID 전체. 누락 R-ID가 있으면 G1 실패.
 
@@ -391,8 +391,8 @@ _(없음 — 사용자 입력 기반 생성)_
 
 | 항목 | IN/OUT | 근거 / 위임처 |
 |------|:------:|--------------|
-| {이 프로젝트 플랜의 책임} | **IN** | {왜 이 프로젝트 플랜의 범위인가} |
-| {이 프로젝트 플랜의 책임 아님} | **OUT** | {위임처: 프로젝트 플랜 이름/시스템/미정} |
+| {이 실행 스펙의 책임} | **IN** | {왜 이 실행 스펙의 범위인가} |
+| {이 실행 스펙의 책임 아님} | **OUT** | {위임처: 실행 스펙 이름/시스템/미정} |
 
 ---
 
@@ -461,12 +461,12 @@ S2 ──┘
 - 의존성 그래프 (ASCII DAG)
 - 전체 체크리스트 (`[ ]` 형식)
 
-**Context Sources 섹션** (build_plan에서 생성):
+**Context Sources 섹션** (build_spec에서 생성):
 
 seed_file이 있는 경우:
 ```markdown
 ## Context Sources
-- [x] **context/003-api-design.md ← Seed** (이 프로젝트 플랜의 기반)
+- [x] **context/003-api-design.md ← Seed** (이 실행 스펙의 기반)
 - [x] context/001-initial.md (배경 참조)
 - [x] context/002-team-review.md (배경 참조)
 ```
@@ -479,7 +479,7 @@ _(없음 — 사용자 입력 기반 생성)_
 
 #### 9-A. 구조 검증 (기계적)
 
-build_plan 완료 후, PLAN.md 필수 구조를 기계적으로 검증한다:
+build_spec 완료 후, SPEC.md 필수 구조를 기계적으로 검증한다:
 
 | 확인 항목 | 검증 방법 |
 |---------|---------|
@@ -493,39 +493,39 @@ build_plan 완료 후, PLAN.md 필수 구조를 기계적으로 검증한다:
 
 ### 10. GATE-FINAL — 최종 확인
 
-완성된 PLAN.md 구조를 요약하여 AskUserQuestion으로 사용자 최종 승인.
+완성된 SPEC.md 구조를 요약하여 AskUserQuestion으로 사용자 최종 승인.
 
 ### 11. write_artifacts — 파일 생성
 
 생성 파일:
 ```
-${PLAN_DIR}/
-├── PLAN.md
+${SPEC_DIR}/
+├── SPEC.md
 ├── PROBLEM.md
 └── sessions.jsonl   ← name_validate에서 이미 생성됨. 여기서는 미존재 시에만 touch
 ```
 
 sessions.jsonl 보존: G1/G3/G4에서 기록한 gate_decision 레코드가 이미 존재하므로 덮어쓰지 않는다.
 ```bash
-[ -f "${PLAN_DIR}/sessions.jsonl" ] || touch "${PLAN_DIR}/sessions.jsonl"
+[ -f "${SPEC_DIR}/sessions.jsonl" ] || touch "${SPEC_DIR}/sessions.jsonl"
 ```
 
 생성하지 않는 파일:
-- knowledge.jsonl    ← per-plan 없음 (PROJ_DIR에 있는 것 사용)
-- context/           ← per-plan 없음 (CTX_DIR 공유)
+- knowledge.jsonl    ← per-spec 없음 (PROJ_DIR에 있는 것 사용)
+- context/           ← per-spec 없음 (CTX_DIR 공유)
 
 `${KNOW_FILE}` 없으면 빈 파일 생성 (경로: ${PROJ_DIR}/knowledge.jsonl).
 
 `${HIST_FILE}`에 append:
 ```jsonl
-{"type":"plan_created","name":"{plan_name}","ts":"{ISO 8601}","seed":"{seed_file 또는 null}"}
+{"type":"spec_created","name":"{spec_name}","ts":"{ISO 8601}","seed":"{seed_file 또는 null}"}
 ```
 
 ### 12. report + GATE-AUTO-EXEC
 
 파일 목록 안내 후 AskUserQuestion:
-- "프로젝트 플랜 `{plan_name}`이 생성되었습니다. `/project-planner exec {plan_name}`을 실행할까요?"
-- [1] `/project-planner exec {plan_name}` 실행 (Recommended)
+- "실행 스펙 `{spec_name}`이 생성되었습니다. `/spec-agent exec {spec_name}`을 실행할까요?"
+- [1] `/spec-agent exec {spec_name}` 실행 (Recommended)
 - [2] 나중에 실행
 
-[1] 선택 시 → Skill 도구로 `/project-planner exec {plan_name} --project {project_name} --repo {repo_slug}` 호출
+[1] 선택 시 → Skill 도구로 `/spec-agent exec {spec_name} --project {project_name} --repo {repo_slug}` 호출

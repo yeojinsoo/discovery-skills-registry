@@ -10,14 +10,14 @@
 
 > JSONL 채택 근거: append(`>>`) 한 줄로 기록 가능, `jq`로 즉시 필터링, git merge conflict 최소화, 라인 단위 컨텍스트 주입 용이.
 
-**변경 정책**: 라운드 실행 중에는 append-only (수정·삭제 금지). 플랜 간 정리 시점에는 PM 승인 하에 아카이브 허용.
+**변경 정책**: 라운드 실행 중에는 append-only (수정·삭제 금지). 스펙 간 정리 시점에는 PM 승인 하에 아카이브 허용.
 
 ---
 
 ## §2. 스키마
 
 ```jsonl
-{"id":"K-014","plan":"project-file-lineage","round":1,"ts":"2026-02-25T12:00:00+09:00","cat":"constraint","confidence":"observed","insight":"REST API 핸들러에서 Claude SDK를 동기 호출하면 ALB 타임아웃 위험. HTTP 202 즉시 반환 + Worker 비동기 처리 패턴 사용","src":"blocker-B1","tags":["async","worker","alb-timeout"]}
+{"id":"K-014","spec":"project-file-lineage","round":1,"ts":"2026-02-25T12:00:00+09:00","cat":"constraint","confidence":"observed","insight":"REST API 핸들러에서 Claude SDK를 동기 호출하면 ALB 타임아웃 위험. HTTP 202 즉시 반환 + Worker 비동기 처리 패턴 사용","src":"blocker-B1","tags":["async","worker","alb-timeout"]}
 ```
 
 ### 필수 필드 (에이전트가 직접 입력)
@@ -35,7 +35,7 @@
 |------|------|----------|
 | `id` | `K-{NNN}` | 마지막 ID + 1 |
 | `ts` | ISO 8601 | 현재 시각 |
-| `plan` | string | 현재 플랜명 |
+| `spec` | string | 현재 스펙명 |
 | `round` | number | 현재 라운드 |
 
 ### grooming 시에만 추가
@@ -65,15 +65,15 @@
 ```
 [생성]              [검증]              [승격 또는 폐기]
 observed ─────────► validated ────────► canonical (CLAUDE.md 반영)
-(C가 1회 관찰)     (다른 플랜에서       └► archived (expires_when 충족)
+(C가 1회 관찰)     (다른 스펙에서       └► archived (expires_when 충족)
                     재발견/적용 성공)
 ```
 
 | 값 | 의미 | 전환 조건 |
 |----|------|----------|
 | `observed` | 1회 관찰 | 기본값 |
-| `validated` | 재현 확인 | 다른 플랜에서 재발견 또는 적용 성공 |
-| `canonical` | 원칙 승격 | CLAUDE.md 또는 `${CLAUDE_SKILL_DIR}/rules/project-plan-quality-characteristics.md`에 반영 완료 |
+| `validated` | 재현 확인 | 다른 스펙에서 재발견 또는 적용 성공 |
+| `canonical` | 원칙 승격 | CLAUDE.md 또는 `${CLAUDE_SKILL_DIR}/rules/spec-quality-characteristics.md`에 반영 완료 |
 
 ---
 
@@ -84,7 +84,7 @@ knowledge.jsonl은 **레포 레벨**과 **프로젝트 레벨** 두 스코프를
 | 스코프 | 경로 | 역할 |
 |--------|------|------|
 | 레포 레벨 | `${REPO_DIR}/knowledge.jsonl` | 레포 전체 광역 교훈. 동일 레포 내 모든 프로젝트가 공유 |
-| 프로젝트 레벨 | `${PROJ_DIR}/knowledge.jsonl` | 특정 프로젝트 내 교훈. 플랜 간 공유 |
+| 프로젝트 레벨 | `${PROJ_DIR}/knowledge.jsonl` | 특정 프로젝트 내 교훈. 스펙 간 공유 |
 
 ### 주입 우선순위
 
@@ -96,7 +96,7 @@ inject_knowledge 시 두 파일을 순서대로 로드:
 
 ### 기록 위치
 
-- 플랜 실행 중 발생한 교훈 → **프로젝트 레벨** `${PROJ_DIR}/knowledge.jsonl`에 append
+- 스펙 실행 중 발생한 교훈 → **프로젝트 레벨** `${PROJ_DIR}/knowledge.jsonl`에 append
 - 레포 레벨은 수동 승격 또는 명시적 지정 시에만 기록
 
 inject_knowledge:
@@ -120,7 +120,7 @@ PROJ_DIR   = ${REPO_DIR}/projects/{project_name}
 KNOW_FILE  = ${PROJ_DIR}/knowledge.jsonl
 ```
 
-> knowledge.jsonl은 **project 단위 단일 파일**이다. per-plan knowledge.jsonl은 존재하지 않는다.
+> knowledge.jsonl은 **project 단위 단일 파일**이다. per-spec knowledge.jsonl은 존재하지 않는다.
 
 ### 규모 판별
 
@@ -197,17 +197,17 @@ jq 'select(.tags | index("oscillation"))' "${KNOW_FILE}"
 
 ## §7. 승격 기준
 
-3개 중 2개 충족 시 `confidence: "canonical"`로 승격 후 CLAUDE.md/project-plan-quality-characteristics.md에 반영:
+3개 중 2개 충족 시 `confidence: "canonical"`로 승격 후 CLAUDE.md/spec-quality-characteristics.md에 반영:
 
-1. **반복 인용**: 3개 이상의 서로 다른 플랜에서 동일 교훈이 참조됨
-2. **보편성**: 특정 기술 스택이 아닌, 플랜 구조/프로토콜 자체에 대한 교훈
+1. **반복 인용**: 3개 이상의 서로 다른 스펙에서 동일 교훈이 참조됨
+2. **보편성**: 특정 기술 스택이 아닌, 스펙 구조/프로토콜 자체에 대한 교훈
 3. **실증**: 해당 교훈을 참조하여 blocker를 사전 회피한 증거 1건 이상
 
 ---
 
 ## §8. 정리 (Grooming)
 
-**트리거**: 파일 50건 도달 또는 5번째 플랜 완료 (어느 쪽이 먼저든).
+**트리거**: 파일 50건 도달 또는 5번째 스펙 완료 (어느 쪽이 먼저든).
 
 ```
 1. 분류: canonical(승격 완료) / active(현역) / expired(만료)

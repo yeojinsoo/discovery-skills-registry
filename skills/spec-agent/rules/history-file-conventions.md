@@ -2,7 +2,7 @@
 
 > **적용 대상**: `repos/{repo_slug}/projects/{project_name}/history.jsonl` (프로젝트 단위)
 
-프로젝트의 context/plan 추가 이력을 시간순으로 기록한다.
+프로젝트의 context/spec 추가 이력을 시간순으로 기록한다.
 
 ---
 
@@ -19,9 +19,9 @@
 | type | 발생 시점 | 기록 위치 (SKILL.md) |
 |------|----------|---------------------|
 | `context_added` | §CONTEXT write_context_file | §CONTEXT 8 |
-| `plan_created` | §CREATE write_artifacts | §CREATE 11 |
-| `plan_completed` | §EXEC set_done | §EXEC 9 |
-| `plan_updated` | §UPDATE update_artifacts | §UPDATE 8 |
+| `spec_created` | §CREATE write_artifacts | §CREATE 11 |
+| `spec_completed` | §EXEC set_done | §EXEC 9 |
+| `spec_updated` | §UPDATE update_artifacts | §UPDATE 8 |
 | `summary_created` | §SUMMARY save_and_output | §SUMMARY 9 |
 | `validation_completed` | §VALIDATE write_report | §VALIDATE 9 |
 
@@ -42,42 +42,42 @@
 | `method` | string \| 생략 | 생성 방법. 기본적으로 생략 |
 | `ts` | ISO 8601 | 기록 시각 |
 
-### plan_created
+### spec_created
 
 ```jsonl
-{"type":"plan_created","name":"ag-1614","ts":"2026-03-11T09:05:00+09:00","seed":"001-initial.md"}
+{"type":"spec_created","name":"ag-1614","ts":"2026-03-11T09:05:00+09:00","seed":"001-initial.md"}
 ```
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `type` | `"plan_created"` | 고정 |
-| `name` | string | 플랜 이름 |
+| `type` | `"spec_created"` | 고정 |
+| `name` | string | 스펙 이름 |
 | `seed` | string \| null | seed context 파일명 (없으면 null) |
 | `ts` | ISO 8601 | 기록 시각 |
 
-### plan_completed
+### spec_completed
 
 ```jsonl
-{"type":"plan_completed","name":"ag-1614","ts":"2026-03-11T15:00:00+09:00","status":"DONE"}
+{"type":"spec_completed","name":"ag-1614","ts":"2026-03-11T15:00:00+09:00","status":"DONE"}
 ```
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `type` | `"plan_completed"` | 고정 |
-| `name` | string | 플랜 이름 |
+| `type` | `"spec_completed"` | 고정 |
+| `name` | string | 스펙 이름 |
 | `status` | enum | `DONE` \| `ABANDONED` |
 | `ts` | ISO 8601 | 기록 시각 |
 
-### plan_updated
+### spec_updated
 
 ```jsonl
-{"type":"plan_updated","name":"ag-1614","ts":"2026-03-11T12:00:00+09:00","changes":"Scope 확장: API 검증 추가"}
+{"type":"spec_updated","name":"ag-1614","ts":"2026-03-11T12:00:00+09:00","changes":"Scope 확장: API 검증 추가"}
 ```
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `type` | `"plan_updated"` | 고정 |
-| `name` | string | 플랜 이름 |
+| `type` | `"spec_updated"` | 고정 |
+| `name` | string | 스펙 이름 |
 | `changes` | string | 변경 요약 (1문장) |
 | `ts` | ISO 8601 | 기록 시각 |
 
@@ -96,7 +96,7 @@
 ### validation_completed
 
 ```jsonl
-{"type":"validation_completed","ts":"2026-03-12T18:00:00+09:00","file":"2026-03-12-provider-file-support-v2.md","result":"ALL_ACHIEVED","plans":["provider-file-support-v2"]}
+{"type":"validation_completed","ts":"2026-03-12T18:00:00+09:00","file":"2026-03-12-provider-file-support-v2.md","result":"ALL_ACHIEVED","specs":["provider-file-support-v2"]}
 ```
 
 | 필드 | 타입 | 설명 |
@@ -104,7 +104,7 @@
 | `type` | `"validation_completed"` | 고정 |
 | `file` | string | 검증 리포트 파일명 |
 | `result` | enum | `ALL_ACHIEVED` \| `PARTIAL` \| `NOT_ACHIEVED` |
-| `plans` | string[] | 검증 대상 플랜 이름 목록 |
+| `specs` | string[] | 검증 대상 스펙 이름 목록 |
 | `ts` | ISO 8601 | 기록 시각 |
 
 ---

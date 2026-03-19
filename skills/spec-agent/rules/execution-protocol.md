@@ -12,7 +12,7 @@
 
 | 역할 | 실행 방식 | 입력 | 출력 | 도구 |
 |------|----------|------|------|------|
-| **오케스트레이터** (메인) | 직접 | progress.md, PLAN.md, knowledge | 워커/검증자 프롬프트, progress.md 갱신 | Read, Write, Edit, Agent |
+| **오케스트레이터** (메인) | 직접 | progress.md, SPEC.md, knowledge | 워커/검증자 프롬프트, progress.md 갱신 | Read, Write, Edit, Agent |
 | **워커** (구현) | Agent tool | Action + key_decisions + warnings + knowledge | 구조화된 결과 요약 (5~10줄) | Read, Write, Edit, Bash, Grep, Glob |
 | **검증자** (A+B+C 통합) | Agent tool | Predicate/Oracle + worker_result + knowledge + sessions | 6상태 판정 + 이슈 + knowledge/sessions 레코드 | Bash, Read, Grep, Glob |
 
@@ -66,15 +66,15 @@
 
 - B(Reviewer)가 **blocker 0건**을 선언할 때 해당 서브태스크의 Predicate가 충족된 것으로 간주
 - 모든 서브태스크가 충족되면 Acceptance Gate 공식(`ACCEPT iff S1 ∧ S2 ∧ ...`)이 true
-- C(Observer)의 수정안 중 **플랜 자체 변경**이 발생하면, 변경 이력을 플랜 문서 하단에 기록
+- C(Observer)의 수정안 중 **스펙 자체 변경**이 발생하면, 변경 이력을 스펙 문서 하단에 기록
 - C(Observer)는 라운드 종료 시 `sessions.jsonl` 레코드를 텍스트로 출력한다. 메인 에이전트가 append 수행. 스키마는 `${CLAUDE_SKILL_DIR}/rules/session-log-conventions.md` 참조
 
 ### 참조 프로토콜
 
 | Agent | 시점 | 참조 방식 |
 |-------|------|----------|
-| **A(Tester)** | 라운드 시작 시 | 플랜 전용 + 공용 `knowledge.jsonl`을 읽고, 관련 pitfall/constraint를 테스트 전략에 반영. 이전에 false-positive가 발생한 Oracle 패턴을 인지하고 보강 |
-| **B(Reviewer)** | 리뷰 시 | 플랜 전용 + 공용 `knowledge.jsonl`을 참조하여 기존 교훈 위반 여부를 검증 항목에 포함. 동일 유형 실수가 재발하면 severity 상향 (warning → blocker) |
+| **A(Tester)** | 라운드 시작 시 | 스펙 전용 + 공용 `knowledge.jsonl`을 읽고, 관련 pitfall/constraint를 테스트 전략에 반영. 이전에 false-positive가 발생한 Oracle 패턴을 인지하고 보강 |
+| **B(Reviewer)** | 리뷰 시 | 스펙 전용 + 공용 `knowledge.jsonl`을 참조하여 기존 교훈 위반 여부를 검증 항목에 포함. 동일 유형 실수가 재발하면 severity 상향 (warning → blocker) |
 | **C(Observer)** | 기록 전 | 기존 파일의 동일 `tags` 레코드를 확인하고 의미적 중복이 있으면 skip. 새 레코드의 `id`는 공용 파일의 마지막 K-NNN + 1 |
 
 ### 전략 전환 렌즈
@@ -134,7 +134,7 @@ Verifier 출력의 ## Lessons 섹션에 기재. 없으면 "없음" 명시.
 2/3 기준은 "기록 판단의 가이드"로 유지하되, 최종 판단은 Verifier의 출력 형식 준수에 의해 강제된다:
 
 1. **반복성**: 동일 실수가 재발했거나, 향후 라운드에서 재발 가능성이 높은가?
-2. **비자명성**: PLAN.md나 CLAUDE.md에 이미 명시되어 있지 않은 교훈인가?
+2. **비자명성**: SPEC.md나 CLAUDE.md에 이미 명시되어 있지 않은 교훈인가?
 3. **행동 가능성**: 읽는 Agent가 즉시 행동을 바꿀 수 있는 구체적 지침인가?
 
 **4번째 기록 트리거 (pathological pattern)**: stagnation, diminishing_returns, 또는 oscillation이 감지되면 2/3 기준과 무관하게 knowledge 레코드를 **필수 기록**한다.
@@ -157,7 +157,7 @@ Verifier 출력의 ## Lessons 섹션에 기재. 없으면 "없음" 명시.
 | 규모 | A/B 인출 방식 |
 |------|-------------|
 | ~50건 | 전체 읽기 (Read tool) |
-| 50~200건 | `jq 'select(.scope=="cross-plan" and .cat=="pitfall")'` 등 태그/카테고리 필터링 |
+| 50~200건 | `jq 'select(.scope=="cross-spec" and .cat=="pitfall")'` 등 태그/카테고리 필터링 |
 | 200건+ | knowledge-index.json 인덱스 → 관련 id 추출 → 해당 레코드만 주입 |
 
 **필수 출력**: A/B는 결과 리포트에 `## 참조한 교훈` 섹션을 포함하여 어떤 레코드를 참조했고 어떤 행동을 변경했는지 명시. 해당 없으면 "해당 없음"으로 표기.

@@ -1,6 +1,6 @@
 ## §VALIDATE — DoD 검증
 
-실행 완료된 플랜들의 구현 결과가 프로젝트의 Definition of Done (PROBLEM.md §3)을 실제로 달성했는지, 분석 방법론을 적용하여 논리적으로 검증한다.
+실행 완료된 스펙들의 구현 결과가 프로젝트의 Definition of Done (PROBLEM.md §3)을 실제로 달성했는지, 분석 방법론을 적용하여 논리적으로 검증한다.
 
 ### 공유 SOT (스텝별 참조)
 
@@ -15,38 +15,38 @@
 ### StateGraph
 
 ```
-parse_args → load_plans → collect_evidence
+parse_args → load_specs → collect_evidence
   → phase_A(R-ID별, 구축 + 비판)
   → compose_agent_team → phase_C_R1(Agent 병렬) → phase_C_R2(메인 판정)
   → phase_S(종합 판정)
   → compose_report → GATE-VALIDATE-CONFIRM(AskUserQuestion)
   → write_report → report → GATE-TO-SUMMARY
       [A] ALL_ACHIEVED:
-          [1] → Skill(/project-planner summary)
+          [1] → Skill(/spec-agent summary)
           [2] → 종료
       [B] PARTIAL/NOT_ACHIEVED:
-          [1] → Skill(/project-planner summary)
+          [1] → Skill(/spec-agent summary)
           [2] → compose_findings → write_context_file → GATE-TO-CREATE_OR_UPDATE
-                  [1] → Skill(/project-planner create)
-                  [2] → Skill(/project-planner update)
+                  [1] → Skill(/spec-agent create)
+                  [2] → Skill(/spec-agent update)
                   [3] → 종료
           [3] → 종료
 ```
 
 ### 1. parse_args
 
-- `--plan {name}`: 특정 플랜 (선택적)
+- `--spec {name}`: 특정 스펙 (선택적)
 - 나머지: 추가 검증 컨텍스트
 
-### 2. load_plans
+### 2. load_specs
 
-- plan_name 지정 → 해당 플랜의 PLAN.md + PROBLEM.md + sessions.jsonl + progress.md 로드
-- plan_name 미지정 → `${PLANS_DIR}/*/PLAN.md` 전체 스캔, `DONE` 상태인 플랜 모두 로드
-- DONE 상태 플랜 없음 → 에러: "검증 대상 플랜이 없습니다. DONE 상태인 플랜이 필요합니다."
+- spec_name 지정 → 해당 스펙의 SPEC.md + PROBLEM.md + sessions.jsonl + progress.md 로드
+- spec_name 미지정 → `${SPECS_DIR}/*/SPEC.md` 전체 스캔, `DONE` 상태인 스펙 모두 로드
+- DONE 상태 스펙 없음 → 에러: "검증 대상 스펙이 없습니다. DONE 상태인 스펙이 필요합니다."
 
-각 플랜에서 추출:
+각 스펙에서 추출:
 - PROBLEM.md §3 (R-ID 목록 — 검증 대상)
-- PLAN.md Section 0 (Contract/Scope/SPEC-TEST)
+- SPEC.md Section 0 (Contract/Scope/SPEC-TEST)
 - sessions.jsonl (실행 결과, checkpoint/CRG 기록)
 - progress.md (실행 상태)
 - ${KNOW_FILE} (실행 중 학습된 지식)
@@ -116,7 +116,7 @@ R-ID별로 관련 코드를 Read/Grep으로 확인하여 구현 증거를 수집
 
 고정 3 에이전트(구조주의자, 회의론자, 실용주의자) + 동적 1 에이전트(프로젝트 도메인에 맞는 관점).
 
-validate 프로파일에서 동적 에이전트는 1개로 고정한다. 시스템 구조가 PLAN.md에 이미 정의되어 있으므로 구조 탐색보다 코드 증거 검증에 집중하기 위함이다.
+validate 프로파일에서 동적 에이전트는 1개로 고정한다. 시스템 구조가 SPEC.md에 이미 정의되어 있으므로 구조 탐색보다 코드 증거 검증에 집중하기 위함이다.
 
 #### 5-1. phase_C_R1 — 독립 비판 (Agent 병렬)
 
@@ -161,7 +161,7 @@ validate에서는 R2-a~R2-g 전체 범위를 작성한다 (`analytical-method.md
 
 #### Invariant 침범 판정 하향 규칙
 
-PLAN.md Scope Boundary에서 `IN (Invariant)`로 지정된 항목이 Phase A 회귀 검사 또는 Phase C에서 침범이 확인된 경우, 해당 Invariant와 연관된 R-ID의 판정을 다음과 같이 하향한다:
+SPEC.md Scope Boundary에서 `IN (Invariant)`로 지정된 항목이 Phase A 회귀 검사 또는 Phase C에서 침범이 확인된 경우, 해당 Invariant와 연관된 R-ID의 판정을 다음과 같이 하향한다:
 
 | 기존 판정 | 하향 판정 | 조건 |
 |:---:|:---:|---|
@@ -178,7 +178,7 @@ PLAN.md Scope Boundary에서 `IN (Invariant)`로 지정된 항목이 Phase A 회
 Phase C R2-a(합의된 문제) 중 심각도 "중대" 이상인 항목이 있으면, 판정관은 각 항목에 대해 다음 중 하나를 기록해야 한다:
 
 1. **R-ID 판정 반영**: 해당 비판이 특정 R-ID의 달성 근거를 훼손 → R-ID 판정을 PARTIAL 이하로 하향
-2. **DoD 범위 외 판정**: 해당 비판이 R-ID DoD 문언의 범위 밖임을 구체적 근거(PROBLEM.md §3 인용 + PLAN.md Scope 참조)와 함께 기록 → 판정 유지, 권고 사항으로 분류
+2. **DoD 범위 외 판정**: 해당 비판이 R-ID DoD 문언의 범위 밖임을 구체적 근거(PROBLEM.md §3 인용 + SPEC.md Scope 참조)와 함께 기록 → 판정 유지, 권고 사항으로 분류
 
 근거 없이 "중대" 합의를 무시하는 것은 금지한다.
 
@@ -203,14 +203,14 @@ Mermaid 다이어그램 포함 시 mmdc 검증 실행.
 mkdir -p "${VALIDATION_DIR}"
 ```
 
-파일명: `{YYYY-MM-DD}-{plan_name 또는 project_name}.md`
+파일명: `{YYYY-MM-DD}-{spec_name 또는 project_name}.md`
 동일 파일 존재 시 `-v2`, `-v3` 접미사.
 
 Write 도구로 `${VALIDATION_DIR}/{filename}` 저장.
 
 `${HIST_FILE}`에 append:
 ```jsonl
-{"type":"validation_completed","ts":"{ISO 8601}","file":"{filename}","result":"{ALL_ACHIEVED|PARTIAL|NOT_ACHIEVED}","plans":["{plan_name_1}","{plan_name_2}"]}
+{"type":"validation_completed","ts":"{ISO 8601}","file":"{filename}","result":"{ALL_ACHIEVED|PARTIAL|NOT_ACHIEVED}","specs":["{spec_name_1}","{spec_name_2}"]}
 ```
 
 ### 10. report + GATE-TO-SUMMARY
@@ -226,11 +226,11 @@ Write 도구로 `${VALIDATION_DIR}/{filename}` 저장.
 AskUserQuestion (전체 판정에 따라 선택지 분기):
 
 **[A] ALL_ACHIEVED**:
-- [1] PR 본문 생성 (Recommended) → Skill 도구로 `/project-planner summary create --project {project_name} --repo {repo_slug}` 호출
+- [1] PR 본문 생성 (Recommended) → Skill 도구로 `/spec-agent summary create --project {project_name} --repo {repo_slug}` 호출
 - [2] 나중에
 
 **[B] PARTIAL / NOT_ACHIEVED** (미달성 R-ID 1개+):
-- [1] PR 본문 생성 → Skill 도구로 `/project-planner summary create --project {project_name} --repo {repo_slug}` 호출
+- [1] PR 본문 생성 → Skill 도구로 `/spec-agent summary create --project {project_name} --repo {repo_slug}` 호출
 - [2] 추가 작업 필요 (미달성 R-ID 대응) → `compose_findings` → `write_context_file` → `GATE-TO-CREATE_OR_UPDATE` (스텝 11)
 - [3] 나중에
 
@@ -300,17 +300,17 @@ Write 도구로 `${CTX_DIR}/{NNN}-validation-findings.md` 저장.
 
 AskUserQuestion:
   "다음 단계를 선택하세요:"
-  [1] 새 프로젝트 플랜 생성 (Recommended)
-  [2] 기존 프로젝트 플랜에 반영
+  [1] 새 실행 스펙 생성 (Recommended)
+  [2] 기존 실행 스펙에 반영
   [3] 나중에 실행
 
 [1] 선택 시:
-  AskUserQuestion: "생성할 프로젝트 플랜 이름을 입력하세요 (kebab-case):"
-  → plan_name 입력받은 후 → Skill 도구로 /project-planner create {plan_name} --project {project_name} --repo {repo_slug} 호출
+  AskUserQuestion: "생성할 실행 스펙 이름을 입력하세요 (kebab-case):"
+  → spec_name 입력받은 후 → Skill 도구로 /spec-agent create {spec_name} --project {project_name} --repo {repo_slug} 호출
 
 [2] 선택 시:
-  프로젝트 플랜 목록 표시 후 AskUserQuestion으로 plan_name 선택
-  → Skill 도구로 /project-planner update {plan_name} --project {project_name} --repo {repo_slug} 호출
+  실행 스펙 목록 표시 후 AskUserQuestion으로 spec_name 선택
+  → Skill 도구로 /spec-agent update {spec_name} --project {project_name} --repo {repo_slug} 호출
 
 [3] 선택 시:
   종료

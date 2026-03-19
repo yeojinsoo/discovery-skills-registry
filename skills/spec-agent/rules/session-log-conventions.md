@@ -1,14 +1,14 @@
 # 세션 로그 규약 (`sessions.jsonl`)
 
-> **적용 대상**: `repos/{repo_slug}/projects/{project_name}/plans/{plan_name}/sessions.jsonl` (프로젝트 플랜 전용)
+> **적용 대상**: `repos/{repo_slug}/projects/{project_name}/specs/{spec_name}/sessions.jsonl` (실행 스펙 전용)
 
-프로젝트 플랜 실행에 사용된 Claude Code 세션의 실행 이력을 기록한다.
+실행 스펙 실행에 사용된 Claude Code 세션의 실행 이력을 기록한다.
 
 ---
 
 ## 1. 형식
 
-**형식**: 1행 = 1 JSON 객체. `id`는 `S-{NNN}` 형식으로 **플랜 내 고유**.
+**형식**: 1행 = 1 JSON 객체. `id`는 `S-{NNN}` 형식으로 **스펙 내 고유**.
 
 > JSONL 채택 근거: `knowledge.jsonl`과 동일. append(`>>`) 한 줄로 기록 가능, `jq`로 즉시 필터링, git merge conflict 최소화.
 
@@ -26,7 +26,7 @@
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `id` | `S-{NNN}` | 플랜 내 순번. S-001, S-002, ... |
+| `id` | `S-{NNN}` | 스펙 내 순번. S-001, S-002, ... |
 | `ts` | ISO 8601 | 세션 실행 시각 (KST 기준 +09:00) |
 | `round` | number | 3-Agent 프로토콜 라운드 번호. 비 3-Agent 실행 시 1부터 순번. (`cycle`은 `round`의 별칭) |
 | `outcome` | enum | 세션 결과. 아래 정의 참조 |
@@ -35,7 +35,7 @@
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `slug` | string | Claude Code 세션 slug (`~/.claude/plans/{slug}.md`와 매핑) |
+| `slug` | string | Claude Code 세션 slug (`~/.claude/specs/{slug}.md`와 매핑) |
 | `session_id` | UUID | Claude Code 세션 UUID (알 수 있을 때) |
 | `subtasks` | string[] | 이 세션에서 완료한 서브태스크 ID 목록 |
 | `knowledge_ids` | string[] | 이 세션에서 생성된 K-NNN 레코드 id 목록 |
@@ -74,7 +74,7 @@
 | `success` | 계획된 작업 전부 완료 | 해당 라운드의 모든 서브태스크가 `[x]` |
 | `partial` | 일부 완료, 잔여 작업 존재 | 서브태스크 일부만 `[x]` |
 | `blocked` | 외부 요인으로 진행 불가 | blocker 발견, 환경 문제, 의존성 미충족 |
-| `aborted` | 의도적 중단 | 접근 방식 변경, 플랜 재설계 결정 |
+| `aborted` | 의도적 중단 | 접근 방식 변경, 스펙 재설계 결정 |
 
 ### 3-2. CRG 세션 outcome
 
@@ -164,19 +164,19 @@ CRG(Critical Review Gate) 세션에서 사용하는 outcome 값. CRG 세션은 `
 
 ---
 
-## 6. 크로스 플랜 쿼리
+## 6. 크로스 스펙 쿼리
 
-공용 `repos/sessions.jsonl` 파일은 생성하지 않는다. 세션은 본질적으로 플랜-로컬이므로 `jq`로 집계:
+공용 `repos/sessions.jsonl` 파일은 생성하지 않는다. 세션은 본질적으로 스펙-로컬이므로 `jq`로 집계:
 
 ```bash
-# 특정 repo의 전체 프로젝트 플랜 세션 시간순 정렬
-cat repos/{repo_slug}/projects/*/plans/*/sessions.jsonl | jq -s 'sort_by(.ts)'
+# 특정 repo의 전체 실행 스펙 세션 시간순 정렬
+cat repos/{repo_slug}/projects/*/specs/*/sessions.jsonl | jq -s 'sort_by(.ts)'
 
 # 특정 project 내 세션 필터
-cat repos/{repo_slug}/projects/{project_name}/plans/*/sessions.jsonl | jq 'select(.outcome == "blocked")'
+cat repos/{repo_slug}/projects/{project_name}/specs/*/sessions.jsonl | jq 'select(.outcome == "blocked")'
 
-# 플랜별 세션 수 집계
-for d in repos/{repo_slug}/projects/{project_name}/plans/*/; do
+# 스펙별 세션 수 집계
+for d in repos/{repo_slug}/projects/{project_name}/specs/*/; do
   echo "$(basename $d): $(wc -l < "$d/sessions.jsonl" 2>/dev/null || echo 0)"
 done
 ```
@@ -189,13 +189,13 @@ done
 
 ```bash
 # 마지막 세션 ID 확인
-tail -1 plans/{plan-name}/sessions.jsonl | jq -r .id
+tail -1 specs/{spec-name}/sessions.jsonl | jq -r .id
 # S-003 → 다음은 S-004
 ```
 
 ### 재개 시 참조
 
-중단된 플랜 재개 시:
+중단된 스펙 재개 시:
 1. `sessions.jsonl` 마지막 레코드의 `outcome`과 `subtasks` 확인
-2. PLAN.md 체크리스트에서 첫 번째 `[ ]` 서브태스크부터 재개
+2. SPEC.md 체크리스트에서 첫 번째 `[ ]` 서브태스크부터 재개
 3. 이전 세션이 `partial`/`blocked`이면 `notes` 필드 맥락 참조
