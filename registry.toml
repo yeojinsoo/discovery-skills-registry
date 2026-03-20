@@ -11,3 +11,8 @@ version = "0.1.0"
 content_hash = "784448cf26956698dfda551a5db1f5390557f28750f4f5177016e5fb9c958b85"
 depends_on = [{ name = "logical-analysis", ref_version = "1.0.0" }]
 description = "실행 스펙 생성/실행/수정 통합 스킬"
+
+[skills.mental-model]
+version = "0.1.0"
+content_hash = "e6ccb59188f1fcb6c239e416f2b031feac9abded79ab6cdcbe84df65e37c45fd"
+description = "Foundation + Map(L0~L5) + Scenario Thread 프레임워크로 코드베이스 멘탈 모델 생성"
