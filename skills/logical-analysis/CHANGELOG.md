@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.3 (2026-03-20)
+- 분석 결과 저장 경로를 외부($HOME/.discovery-skills/logical-analysis/analyses/)로 분리
+
 ## 1.0.2 (2026-03-20)
 
 - modules/phase-*.md SOT 주석에서 스킬명 괄호 제거 (스킬 중립화)

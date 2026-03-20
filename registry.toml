@@ -2,8 +2,8 @@
 repo = "yeojinsoo/discovery-skills-registry"
 
 [skills.logical-analysis]
-version = "1.0.2"
-content_hash = "4cab93656df4987e44371ad3bdc04513a4be1f10f5b79d04456f7a9f3af73ba2"
+version = "1.0.3"
+content_hash = "6acee949ee5a377274ffd45e71c6b37a752d8aa56587248823d1ee89b182d916"
 description = "개념이나 시스템을 논리적으로 완전 해체하는 분석 스킬"
 
 [skills.spec-agent]

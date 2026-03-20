@@ -1,7 +1,7 @@
 ---
 name: logical-analysis
 description: |
-  개념이나 시스템을 논리적으로 완전 해체하는 분석 스킬. 사전 질문 → Phase 0(시스템 위상 분석) → Phase 1(구성요소 심층 분석) → Phase 2(다관점 에이전트 팀 비판) → Phase 3(최종 종합) 프로세스를 따른다. 이 스킬은 사용자가 명시적으로 "/logical-analysis" 커맨드를 입력했을 때만 실행한다. 자연어 요청("논리적으로 분석해줘", "해체해줘" 등)으로는 트리거하지 않는다.
+  개념이나 시스템을 논리적으로 완전 해체하는 분석 스킬. 분석 결과는 $HOME/.discovery-skills/logical-analysis/analyses/에 저장. 사전 질문 → Phase 0(시스템 위상 분석) → Phase 1(구성요소 심층 분석) → Phase 2(다관점 에이전트 팀 비판) → Phase 3(최종 종합) 프로세스를 따른다. 이 스킬은 사용자가 명시적으로 "/logical-analysis" 커맨드를 입력했을 때만 실행한다. 자연어 요청("논리적으로 분석해줘", "해체해줘" 등)으로는 트리거하지 않는다.
 ---
 
 # 논리적 해체 분석
@@ -14,7 +14,8 @@ description: |
 
 ```
 SKILL_DIR    = ${CLAUDE_SKILL_DIR}
-OUTPUT_DIR   = ${CLAUDE_SKILL_DIR}/analyses
+DATA_ROOT    = $HOME/.discovery-skills/logical-analysis
+OUTPUT_DIR   = ${DATA_ROOT}/analyses
 MODULES      = ${SKILL_DIR}/modules
 ```
 
