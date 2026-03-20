@@ -100,7 +100,7 @@ cat .github/pull_request_template.md 2>/dev/null
 #### 3. load_specs — 실행 스펙 컨텍스트 로드
 
 - spec_name 지정 → `${SPECS_DIR}/{spec_name}/SPEC.md` + `PROBLEM.md` 로드
-- spec_name 미지정 → `${SPECS_DIR}/*/SPEC.md` 전체 스캔, `DONE` 상태인 실행 스펙 모두 로드
+- spec_name 미지정 → `${SPECS_DIR}/*/SPEC.md` 전체 스캔, YAML frontmatter `status` 필드가 `DONE`인 실행 스펙 모두 로드
 - 실행 스펙 0건 → diff에서 변경 의도 역추론 (실행 스펙 없이도 동작)
 
 **GATE-NON-DONE**: `DONE`이 아닌 스펙(`IN_PROGRESS`, `PLANNED` 등)이 1개 이상 존재하면 AskUserQuestion:

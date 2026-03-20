@@ -1,6 +1,6 @@
 # 세션 로그 규약 (`sessions.jsonl`)
 
-> **적용 대상**: `repos/{repo_slug}/projects/{project_name}/specs/{spec_name}/sessions.jsonl` (실행 스펙 전용)
+> **적용 대상**: `${REPOS_ROOT}/{repo_slug}/projects/{project_name}/specs/{spec_name}/sessions.jsonl` (실행 스펙 전용)
 
 실행 스펙 실행에 사용된 Claude Code 세션의 실행 이력을 기록한다.
 
@@ -113,10 +113,11 @@ CRG(Critical Review Gate) 세션에서 사용하는 outcome 값. CRG 세션은 `
 | **`summary`** | string | **1줄 완료 요약 (신규)** |
 | **`decisions`** | string[] | **후속 서브태스크에 영향을 주는 결정 (신규)** |
 | **`warnings`** | string[] | **미해결 경고 (신규)** |
+| **`changed_files`** | string[] | **서브태스크 실행 중 변경된 파일 경로 목록 (선택)** |
 
 예시:
 ```jsonl
-{"type":"checkpoint","subtask":"S3","outcome":"success","ts":"2026-03-11T09:05:00Z","summary":"Provider 파일 경로 해석 로직 구현","decisions":["glob 대신 정규식 매칭 채택"],"warnings":["기존 테스트 1건 실패 — S4에서 수정 필요"]}
+{"type":"checkpoint","subtask":"S3","outcome":"success","ts":"2026-03-11T09:05:00Z","summary":"Provider 파일 경로 해석 로직 구현","decisions":["glob 대신 정규식 매칭 채택"],"warnings":["기존 테스트 1건 실패 — S4에서 수정 필요"],"changed_files":["src/providers/resolver.ts","src/utils/path.ts"]}
 ```
 
 > Checkpoint 레코드는 `id`(S-NNN)를 부여하지 않는다. 단순 마커이므로 sessions.jsonl id 시퀀스에 포함하지 않는다.
@@ -170,13 +171,13 @@ CRG(Critical Review Gate) 세션에서 사용하는 outcome 값. CRG 세션은 `
 
 ```bash
 # 특정 repo의 전체 실행 스펙 세션 시간순 정렬
-cat repos/{repo_slug}/projects/*/specs/*/sessions.jsonl | jq -s 'sort_by(.ts)'
+cat ${REPOS_ROOT}/{repo_slug}/projects/*/specs/*/sessions.jsonl | jq -s 'sort_by(.ts)'
 
 # 특정 project 내 세션 필터
-cat repos/{repo_slug}/projects/{project_name}/specs/*/sessions.jsonl | jq 'select(.outcome == "blocked")'
+cat ${REPOS_ROOT}/{repo_slug}/projects/{project_name}/specs/*/sessions.jsonl | jq 'select(.outcome == "blocked")'
 
 # 스펙별 세션 수 집계
-for d in repos/{repo_slug}/projects/{project_name}/specs/*/; do
+for d in ${REPOS_ROOT}/{repo_slug}/projects/{project_name}/specs/*/; do
   echo "$(basename $d): $(wc -l < "$d/sessions.jsonl" 2>/dev/null || echo 0)"
 done
 ```

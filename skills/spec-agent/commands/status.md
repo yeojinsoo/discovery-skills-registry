@@ -52,6 +52,18 @@ SKILL.md Step 0-1의 플래그 파싱(`--repo`, `--project`)은 이미 완료된
 
 SKILL.md의 경로 상수 테이블에 따라 런타임 경로를 바인딩한다. mkdir 실행하지 않음.
 
+### 0-S-5. 프로젝트 상태 로드
+
+`${PROJECT_FILE}` (`project.json`)을 읽어 프로젝트 레벨 상태를 가져온다.
+
+1. `${PROJECT_FILE}` 존재 → JSON 파싱하여 `project_status`, `statusUpdatedAt` 추출
+2. `${PROJECT_FILE}` 미존재 (레거시 프로젝트) → `${HIST_FILE}` 기반 fallback:
+   - history.jsonl 존재 시: 최신 이벤트의 `type`으로 상태 추정
+     - `validation_completed` (result=ALL_ACHIEVED) → "VERIFIED (추정)"
+     - `spec_completed` / `spec_created` 이후 validation 없음 → "DONE (추정)" / "DEFINING (추정)"
+     - 그 외 → "UNKNOWN"
+   - history.jsonl도 미존재 → `project_status = "DEFINING (추정)"`
+
 ---
 
 ## Step 1: 데이터 수집
@@ -73,7 +85,7 @@ ls "${SPECS_DIR}" 2>/dev/null
 ```
 
 각 스펙 디렉토리에서:
-- **SPEC.md 첫 3줄**에서 상태·버전 파싱 (패턴: `**상태**: {STATUS}`, `**버전**: v{N}`)
+- **SPEC.md YAML frontmatter**에서 상태·버전 파싱 (필드: `status: {STATUS}`, `version: v{N}`)
 - **SPEC.md** Contract Statement 본문 첫 1-2문장 추출 (스펙의 목표 요약)
 - **SPEC.md** Contract Statement의 `§3 추적` 줄에서 R-ID 목록 추출
 - **SPEC.md** Context Sources 체크박스에서 연결된 context 파일 목록 추출
@@ -146,6 +158,8 @@ git status --short 2>/dev/null
 
 ```markdown
 ## {project_name} 프로젝트 현황
+
+프로젝트 상태: **{project_status}** {statusUpdatedAt가 있으면: "(since {statusUpdatedAt})"}
 
 ### 기본 정보
 

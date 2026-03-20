@@ -34,13 +34,13 @@
 
 ## §2. Verifier 내부 3관점: Tester / Reviewer / Observer
 
-실행 계획의 Acceptance Gate 달성까지, 검증자 내부에서 3개 관점을 운용하여 검증 품질을 보장한다.
+실행 스펙의 Acceptance Gate 달성까지, 검증자 내부에서 3개 관점을 운용하여 검증 품질을 보장한다.
 
 ### Agent 역할 정의
 
 | Agent | 역할 | 입력 | 출력 | 판단 기준 |
 |:-----:|------|------|------|----------|
-| **A — Tester** | Predicate + Oracle을 실행하여 6상태 판정(`references/test-verification-guide.md` §1). `knowledge.jsonl`의 기존 교훈을 참조하여 이전에 실패했던 패턴을 사전 회피. 이전 PASS Oracle 회귀 검사(`rules/regression-test-strategy.md` §2) | 실행 계획, 코드베이스, `knowledge.jsonl`, `sessions.jsonl` | 서브태스크별 6상태 판정(PASS/FAIL/PARTIAL/NOT_COVERED/UNCERTAIN/TIMED_OUT) + 실패 로그 | Oracle 조건 충족 여부 + 이전 PASS 보존 여부 |
+| **A — Tester** | Predicate + Oracle을 실행하여 6상태 판정(`references/test-verification-guide.md` §1). `knowledge.jsonl`의 기존 교훈을 참조하여 이전에 실패했던 패턴을 사전 회피. 이전 PASS Oracle 회귀 검사(`rules/regression-test-strategy.md` §2) | 실행 스펙, 코드베이스, `knowledge.jsonl`, `sessions.jsonl` | 서브태스크별 6상태 판정(PASS/FAIL/PARTIAL/NOT_COVERED/UNCERTAIN/TIMED_OUT) + 실패 로그 | Oracle 조건 충족 여부 + 이전 PASS 보존 여부 |
 | **B — Reviewer** | A의 실행 결과를 비판적으로 검토. `knowledge.jsonl`의 기존 교훈을 참조하여 기존 교훈이 위반된 경우 severity를 상향 | A의 결과 리포트, `knowledge.jsonl` | 이슈 목록 (severity: blocker/warning/note) | 테스트가 Predicate의 의도를 충실히 검증했는가 |
 | **C — Observer** | A+B의 논의를 종합하여 수정안 제시 + 지식 축적 판별 | A 결과 + B 이슈 목록, `knowledge.jsonl` | (1) 수정 제안서 + (2) `knowledge.jsonl` append 레코드 | 수정안이 B의 blocker를 해소하는가 |
 

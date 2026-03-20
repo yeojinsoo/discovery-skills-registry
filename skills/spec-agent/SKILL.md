@@ -1,6 +1,6 @@
 ---
 name: spec-agent
-description: "실행 계획 생성/실행/수정 통합 스킬. 실행 스펙 데이터를 외부 경로($HOME/.discovery-skills/spec-agent/repos/)에 저장하여 레포 무관 재사용 가능. /spec-agent context [name] — create 전 문제 구체화, /spec-agent create [name] — 신규 생성, /spec-agent exec [name] — 실행, /spec-agent update [name] — 수정, /spec-agent validate [name] — DoD 검증, /spec-agent summary — PR 본문 생성/조회/수정, /spec-agent status — 프로젝트 현황 조회. 이 스킬은 사용자가 명시적으로 \"/spec-agent\" 커맨드를 입력했을 때만 실행한다. 자연어 요청으로는 트리거하지 않는다."
+description: "실행 스펙 생성/실행/수정 통합 스킬. 실행 스펙 데이터를 외부 경로($HOME/.discovery-skills/spec-agent/repos/)에 저장하여 레포 무관 재사용 가능. /spec-agent context [name] — create 전 문제 구체화, /spec-agent create [name] — 신규 생성, /spec-agent exec [name] — 실행, /spec-agent update [name] — 수정, /spec-agent validate [name] — DoD 검증, /spec-agent summary — PR 본문 생성/조회/수정, /spec-agent status — 프로젝트 현황 조회, /spec-agent distill — 프로젝트 교훈 정리. 이 스킬은 사용자가 명시적으로 \"/spec-agent\" 커맨드를 입력했을 때만 실행한다. 자연어 요청으로는 트리거하지 않는다."
 allowed-tools:
   - Read
   - Write
@@ -15,7 +15,7 @@ allowed-tools:
 
 # spec-agent
 
-컨텍스트(context), 생성(create), 실행(exec), 수정(update), 검증(validate), PR 본문(summary), 현황 조회(status)를 단일 스킬로 처리한다.
+컨텍스트(context), 생성(create), 실행(exec), 수정(update), 검증(validate), PR 본문(summary), 현황 조회(status), 교훈 정리(distill)를 단일 스킬로 처리한다.
 모든 실행 스펙 데이터는 `${SPEC_DIR}`에 저장된다. 데이터는 스킬 디렉토리 외부(`$HOME/.discovery-skills/spec-agent/repos/`)에 분리 저장되어 레포에 파일을 남기지 않으며 어느 프로젝트에서도 동일하게 동작한다.
 
 ## 경로 상수 (스킬 전체에서 사용)
@@ -32,9 +32,10 @@ LA_MODULES = ${CLAUDE_SKILL_DIR}/../logical-analysis/modules
 REPO_DIR  = ${REPOS_ROOT}/{repo_slug}/
 PROJ_DIR  = ${REPO_DIR}/projects/{project_name}/
 CTX_DIR   = ${PROJ_DIR}/context/
-HIST_FILE = ${PROJ_DIR}/history.jsonl
-KNOW_FILE = ${PROJ_DIR}/knowledge.jsonl
-SPECS_DIR   = ${PROJ_DIR}/specs/
+HIST_FILE     = ${PROJ_DIR}/history.jsonl
+KNOW_FILE     = ${PROJ_DIR}/knowledge.jsonl
+PROJECT_FILE  = ${PROJ_DIR}/project.json
+SPECS_DIR     = ${PROJ_DIR}/specs/
 SPEC_DIR      = ${PROJ_DIR}/specs/{spec_name}/
 PROGRESS_FILE = ${SPEC_DIR}/progress.md
 SUMMARY_DIR    = ${PROJ_DIR}/summary/
@@ -53,10 +54,10 @@ VALIDATION_DIR = ${PROJ_DIR}/validations/
 | 실행 스펙 품질 특성 | `rules/spec-quality-characteristics.md` | §CREATE, §UPDATE |
 | 실행 프로토콜 | `rules/execution-protocol.md` | §EXEC |
 | sessions.jsonl 규약 | `rules/session-log-conventions.md` | §EXEC |
-| knowledge.jsonl 규약 + 인출 전략 | `rules/knowledge-conventions.md` | §CREATE, §EXEC, §VALIDATE |
+| knowledge.jsonl 규약 + 인출 전략 | `rules/knowledge-conventions.md` | §CREATE, §EXEC, §VALIDATE, §DISTILL |
 | SPEC-TEST 정합성 | `rules/spec-test-alignment.md` | §CREATE, §UPDATE |
 | CRG 프로토콜 | `rules/critical-review-gate.md` | §EXEC |
-| history.jsonl 규약 | `rules/history-file-conventions.md` | §CREATE, §EXEC, §UPDATE, §SUMMARY, §VALIDATE |
+| history.jsonl 규약 | `rules/history-file-conventions.md` | §CREATE, §EXEC, §UPDATE, §SUMMARY, §VALIDATE, §DISTILL |
 | 분석 방법론 | `rules/analytical-method.md` | §VALIDATE, §SUMMARY |
 | 3계층 회귀 테스트 전략 | `rules/regression-test-strategy.md` | §EXEC, §VALIDATE |
 
@@ -93,6 +94,7 @@ $ARGUMENTS 전체에서 플래그를 우선 추출:
 - `context` → slug (컨텍스트 파일 이름)로 파싱. spec_name 아님.
 - `summary` → 나머지 args 전체를 §SUMMARY 내부 라우터에 그대로 전달 (spec_name 파싱 안 함)
 - `status` → 추가 인자 없음 (잉여 인자는 무시). --repo, --project 플래그만 유효. §0-1-1에서 조기 라우팅.
+- `distill` → 추가 인자 없음 (프로젝트 레벨 커맨드). --repo, --project 플래그만 유효.
 
 ### 0-1-1. status 조기 라우팅
 
@@ -173,6 +175,33 @@ PROJ_DIR = ${REPO_DIR}/projects/{project_name}/
   mkdir -p "${CTX_DIR}"
   (knowledge.jsonl, history.jsonl은 각 커맨드에서 필요 시 생성)
 
+**project.json 초기화** (미존재 시):
+  `${PROJECT_FILE}` 경로에 파일이 없으면 기본값으로 생성:
+  ```json
+  {"status":"DEFINING","statusUpdatedAt":"{ISO 8601}"}
+  ```
+  이미 존재하면 읽기만 수행하여 현재 상태를 확인한다.
+
+**project.json 스키마**:
+  ```json
+  {
+    "status": "DEFINING | RUNNING | DONE | VERIFIED | CLOSED",
+    "statusUpdatedAt": "{ISO 8601}"
+  }
+  ```
+  - `status`: 프로젝트의 현재 마일스톤 (5값 enum)
+  - `statusUpdatedAt`: 마지막 상태 전환 시각
+
+**상태 전환 규칙** (각 커맨드에서 실행):
+  | 커맨드 | 전환 | 조건 |
+  |--------|------|------|
+  | context, create | → DEFINING | CLOSED가 아닐 때 |
+  | exec (시작) | → RUNNING | — |
+  | exec (모든 스펙 DONE) | → DONE | — |
+  | validate (ALL_ACHIEVED) | → VERIFIED | — |
+  | validate (PARTIAL/NOT_ACHIEVED) | → DEFINING | 루프백 |
+  | close | → CLOSED | 어떤 상태에서든 |
+
 ### 0-5. 서브커맨드 라우팅
 
 서브커맨드에 따라 해당 command 파일을 Read로 로드한 후 실행:
@@ -184,7 +213,9 @@ PROJ_DIR = ${REPO_DIR}/projects/{project_name}/
 - validate → Read(`${CLAUDE_SKILL_DIR}/commands/validate.md`) → 로드된 §VALIDATE 워크플로우 실행
 - summary  → Read(`${CLAUDE_SKILL_DIR}/commands/summary.md`) → 로드된 §SUMMARY 워크플로우 실행 (나머지 args를 §SUMMARY 내부 라우터에 전달; spec_name 파싱 안 함)
 - status   → Read(`${CLAUDE_SKILL_DIR}/commands/status.md`) → 로드된 §STATUS 워크플로우 실행 (읽기 전용; Step 0-S 자체 환경 감지 사용)
-- 기타     → "사용법: /spec-agent [context|create|exec|update|validate|summary|status] [spec-name]
+- distill  → Read(`${CLAUDE_SKILL_DIR}/commands/distill.md`) → 로드된 §DISTILL 워크플로우 실행
+- close    → Read(`${CLAUDE_SKILL_DIR}/commands/close.md`) → 로드된 §CLOSE 워크플로우 실행
+- 기타     → "사용법: /spec-agent [context|create|exec|update|validate|summary|status|distill|close] [spec-name]
               옵션: --project {name}, --repo {slug}, --seed {context-file}, --spec {name}"
 
 ---

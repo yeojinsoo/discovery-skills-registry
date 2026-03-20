@@ -41,7 +41,7 @@ parse_args → load_specs → collect_evidence
 ### 2. load_specs
 
 - spec_name 지정 → 해당 스펙의 SPEC.md + PROBLEM.md + sessions.jsonl + progress.md 로드
-- spec_name 미지정 → `${SPECS_DIR}/*/SPEC.md` 전체 스캔, `DONE` 상태인 스펙 모두 로드
+- spec_name 미지정 → `${SPECS_DIR}/*/SPEC.md` 전체 스캔, YAML frontmatter `status` 필드가 `DONE`인 스펙 모두 로드
 - DONE 상태 스펙 없음 → 에러: "검증 대상 스펙이 없습니다. DONE 상태인 스펙이 필요합니다."
 
 각 스펙에서 추출:
@@ -212,6 +212,16 @@ Write 도구로 `${VALIDATION_DIR}/{filename}` 저장.
 ```jsonl
 {"type":"validation_completed","ts":"{ISO 8601}","file":"{filename}","result":"{ALL_ACHIEVED|PARTIAL|NOT_ACHIEVED}","specs":["{spec_name_1}","{spec_name_2}"]}
 ```
+
+### 9-1. project.json 상태 전환
+
+write_report 완료 후 실행:
+
+현재 `${PROJECT_FILE}`의 status를 읽어, 전체 판정에 따라 전환:
+  - 조건: ALL_ACHIEVED → 전환: status → VERIFIED
+    - Write: `{"status":"VERIFIED","statusUpdatedAt":"{ISO 8601}"}`
+  - 조건: PARTIAL 또는 NOT_ACHIEVED → 전환: status → DEFINING (루프백)
+    - Write: `{"status":"DEFINING","statusUpdatedAt":"{ISO 8601}"}`
 
 ### 10. report + GATE-TO-SUMMARY
 

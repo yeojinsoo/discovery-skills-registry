@@ -47,7 +47,7 @@ Read: ${SPEC_DIR}/sessions.jsonl
 
 서브태스크 8개 이상인 실행 스펙은 sessions.jsonl 마지막 2개 레코드만 로드.
 
-SPEC.md에서 추출:
+SPEC.md에서 추출 (상태/버전은 YAML frontmatter `status`, `version` 필드에서 추출):
 - Contract Statement, Scope Boundary
 - Acceptance Gate 공식
 - 서브태스크 목록 + 각 Predicate/Oracle 테이블
@@ -108,7 +108,13 @@ AskUserQuestion으로 실행 범위 확인.
 
 ### 5. set_in_progress
 
-SPEC.md 상태 `PLANNED` → `IN_PROGRESS`.
+SPEC.md YAML frontmatter의 `status` 필드를 `PLANNED` → `IN_PROGRESS`로 변경한다.
+
+**project.json 상태 전환**:
+현재 `${PROJECT_FILE}`의 status를 읽어, 조건에 따라 전환:
+  - 조건: 실행 시작 시 항상
+  - 전환: status → RUNNING
+  - Write: `{"status":"RUNNING","statusUpdatedAt":"{ISO 8601}"}`
 
 ### 5-1. init_progress
 
@@ -367,13 +373,14 @@ A. **sessions.jsonl checkpoint** (기존):
 blocker 0건으로 `[x]` 전환 직후 sessions.jsonl에 즉시 append:
 
 ```jsonl
-{"type":"checkpoint","subtask":"{S_ID}","outcome":"success","ts":"{ISO 8601}","summary":"{1줄 완료 요약}","decisions":["{결정 사항}"],"warnings":["{미해결 경고}"]}
+{"type":"checkpoint","subtask":"{S_ID}","outcome":"success","ts":"{ISO 8601}","summary":"{1줄 완료 요약}","decisions":["{결정 사항}"],"warnings":["{미해결 경고}"],"changed_files":["{변경 파일 경로}"]}
 ```
 
 필드 설명:
 - `summary`: 워커 결과의 "주요 변경" 1줄 요약
 - `decisions`: 워커 결과의 "결정 사항" + 검증자(Observer)의 수정안에서 추출
 - `warnings`: 검증자의 warning 중 미해결 사항. 비어있으면 `[]`
+- `changed_files`: 워커 결과의 "변경 파일" 경로 목록. 비어있으면 `[]`
 
 이 레코드는 컨텍스트 압축 재개 시 `check_history`의 Guard Clause가 완료 상태를 정확히 감지하는 데 사용되며, `progress.md` 미존재 시 `context_refresh`의 상태 복원 대안으로도 활용된다.
 `id` 시퀀스(S-NNN)는 부여하지 않는다.
@@ -571,7 +578,13 @@ result=$(jq -r 'select(.type=="crg" and (.outcome=="crg_pass" or .outcome=="cond
 - `result` 비어있음 (`-z`) → Step 8 실행
 - `result` 있음 → Step 9-1로 진행
 
-**Step 9-1**: SPEC.md 상태 → `DONE`
+**Step 9-1**: SPEC.md YAML frontmatter의 `status` 필드를 `DONE`으로 변경한다.
+
+**project.json 상태 전환**:
+현재 `${PROJECT_FILE}`의 status를 읽어, 조건에 따라 전환:
+  - 조건: 모든 스펙이 DONE 상태일 때
+  - 전환: status → DONE
+  - Write: `{"status":"DONE","statusUpdatedAt":"{ISO 8601}"}`
 
 **Step 9-2**: sessions.jsonl에 CRG 통과 레코드 append
 

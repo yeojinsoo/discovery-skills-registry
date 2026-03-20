@@ -175,7 +175,7 @@ NEEDS_REVIEW → [관리자 포기 결정] → ABANDONED
 
 ### 5-5. IN_PROGRESS 복귀 시
 
-- SPEC.md 버전을 올린다 (예: v1.1 → v2.0)
+- SPEC.md YAML frontmatter의 `version` 필드를 올린다 (예: v1.1 → v2.0)
 - CRG 사이클 카운터가 리셋된다 (신규 CRG 3회 허용)
 - sessions.jsonl에 복귀 레코드를 append한다 (outcome: `aborted`, notes: "NEEDS_REVIEW → IN_PROGRESS 복귀, 관리자 결정")
 
@@ -188,7 +188,7 @@ NEEDS_REVIEW → [관리자 포기 결정] → ABANDONED
 CRG 실행 시 비평 내용을 스펙 디렉토리에 저장한다:
 
 ```
-repos/{repo_slug}/projects/{project_name}/specs/{spec_name}/
+${REPOS_ROOT}/{repo_slug}/projects/{project_name}/specs/{spec_name}/
 ├── PROBLEM.md
 ├── SPEC.md
 ├── sessions.jsonl

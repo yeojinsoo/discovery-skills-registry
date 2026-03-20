@@ -48,6 +48,8 @@ ls ${SPEC_DIR}/crg-*.md 2>/dev/null → 존재하면 최신 파일 Read
 
 `${SPEC_DIR}/SPEC.md` 미존재 → 에러: "실행 스펙 '{spec_name}'을 찾을 수 없습니다."
 
+SPEC.md 상태/버전은 YAML frontmatter (`status`, `version` 필드)에서 추출한다.
+
 ### 2. validate_state
 
 `${CLAUDE_SKILL_DIR}/references/version-rules.md` 참조:

@@ -266,6 +266,15 @@ context 파일 초안을 출력하고, 입력 통계를 병기한 후 AskUserQue
 
 > SKILL.md 공유 유틸리티 `write_context_file` 참조.
 
+### 8-1. project.json 상태 전환
+
+write_context_file 완료 후 실행:
+
+현재 `${PROJECT_FILE}`의 status를 읽어, 조건에 따라 전환:
+  - 조건: status가 CLOSED가 아닐 때
+  - 전환: status → DEFINING
+  - Write: `{"status":"DEFINING","statusUpdatedAt":"{ISO 8601}"}`
+
 ### 9. report + GATE-TO-CREATE_OR_UPDATE
 
 > SKILL.md 공유 유틸리티 `report + GATE-TO-CREATE_OR_UPDATE` 참조.

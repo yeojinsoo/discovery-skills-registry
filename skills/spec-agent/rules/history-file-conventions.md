@@ -1,6 +1,6 @@
 # 이력 파일 규약 (`history.jsonl`)
 
-> **적용 대상**: `repos/{repo_slug}/projects/{project_name}/history.jsonl` (프로젝트 단위)
+> **적용 대상**: `${REPOS_ROOT}/{repo_slug}/projects/{project_name}/history.jsonl` (프로젝트 단위)
 
 프로젝트의 context/spec 추가 이력을 시간순으로 기록한다.
 
@@ -24,6 +24,7 @@
 | `spec_updated` | §UPDATE update_artifacts | §UPDATE 8 |
 | `summary_created` | §SUMMARY save_and_output | §SUMMARY 9 |
 | `validation_completed` | §VALIDATE write_report | §VALIDATE 9 |
+| `distill_completed` | §DISTILL report | §DISTILL 6 |
 
 ---
 
@@ -105,6 +106,21 @@
 | `file` | string | 검증 리포트 파일명 |
 | `result` | enum | `ALL_ACHIEVED` \| `PARTIAL` \| `NOT_ACHIEVED` |
 | `specs` | string[] | 검증 대상 스펙 이름 목록 |
+| `ts` | ISO 8601 | 기록 시각 |
+
+### distill_completed
+
+```jsonl
+{"type":"distill_completed","ts":"2026-03-21T00:10:00+09:00","promoted":2,"archived":1,"kept":3,"skipped":0}
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `type` | `"distill_completed"` | 고정 |
+| `promoted` | number | 레포 레벨로 승격된 레코드 수 |
+| `archived` | number | 아카이브로 이동된 레코드 수 |
+| `kept` | number | 프로젝트 레벨에 유지된 레코드 수 |
+| `skipped` | number | 중복으로 스킵된 레코드 수 |
 | `ts` | ISO 8601 | 기록 시각 |
 
 ---

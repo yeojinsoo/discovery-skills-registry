@@ -1,12 +1,12 @@
 # 지식 규약 (`knowledge.jsonl`)
 
-> **적용 대상**: `repos/{repo_slug}/projects/{project_name}/knowledge.jsonl` (프로젝트 단위)
+> **적용 대상**: `${REPOS_ROOT}/{repo_slug}/projects/{project_name}/knowledge.jsonl` (프로젝트 단위)
 
 ---
 
 ## §1. 형식
 
-**형식**: 1행 = 1 JSON 객체. `id`는 `K-{NNN}` 형식으로 **전역 고유**.
+**형식**: 1행 = 1 JSON 객체. `id`는 `K-{NNN}`(프로젝트) / `RK-{NNN}`(레포) 형식으로 **전역 고유**.
 
 > JSONL 채택 근거: append(`>>`) 한 줄로 기록 가능, `jq`로 즉시 필터링, git merge conflict 최소화, 라인 단위 컨텍스트 주입 용이.
 
@@ -33,7 +33,7 @@
 
 | 필드 | 타입 | 생성 방식 |
 |------|------|----------|
-| `id` | `K-{NNN}` | 마지막 ID + 1 |
+| `id` | `K-{NNN}` (프로젝트) / `RK-{NNN}` (레포) | 마지막 ID + 1. 레포 레벨은 distill 승격 시 `RK-` 접두사 부여 |
 | `ts` | ISO 8601 | 현재 시각 |
 | `spec` | string | 현재 스펙명 |
 | `round` | number | 현재 라운드 |
@@ -114,7 +114,8 @@ cat "${PROJ_DIR}/knowledge.jsonl" | jq 'select(.tags | contains(["..."]))'
 ### 경로 변수 (이 섹션 전체에서 사용)
 
 ```
-REPOS_ROOT = ${CLAUDE_SKILL_DIR}/repos
+DATA_ROOT  = $HOME/.discovery-skills/spec-agent
+REPOS_ROOT = ${DATA_ROOT}/repos
 REPO_DIR   = ${REPOS_ROOT}/{repo_slug}
 PROJ_DIR   = ${REPO_DIR}/projects/{project_name}
 KNOW_FILE  = ${PROJ_DIR}/knowledge.jsonl
@@ -207,10 +208,19 @@ jq 'select(.tags | index("oscillation"))' "${KNOW_FILE}"
 
 ## §8. 정리 (Grooming)
 
-**트리거**: 파일 50건 도달 또는 5번째 스펙 완료 (어느 쪽이 먼저든).
+**트리거**: 사용자가 `/spec-agent distill` 커맨드를 명시적으로 호출한다.
 
-```
-1. 분류: canonical(승격 완료) / active(현역) / expired(만료)
-2. 아카이브: canonical + expired → knowledge.archive.jsonl 이동
-3. PM 승인 후 적용
-```
+> 자세한 절차는 `commands/distill.md` 참조.
+
+### 동작 요약
+
+1. **분류** — 프로젝트 레벨 `${PROJ_DIR}/knowledge.jsonl`의 각 레코드를 3가지로 분류한다.
+
+| 분류 | 기준 | 처리 |
+|------|------|------|
+| **canonical** | confidence `validated` 이상 + 범용적 | `RK-{NNN}` ID를 부여하여 `${REPO_DIR}/knowledge.jsonl`로 승격 (confidence는 `validated` 유지 — §7 기준 충족 후 `canonical` 전환) |
+| **active** | 프로젝트 한정 유효 | `${PROJ_DIR}/knowledge.jsonl`에 그대로 유지 |
+| **expired** | 무효화 또는 일회성 | `${PROJ_DIR}/knowledge.archive.jsonl`로 아카이브 |
+
+2. **확인** — AskUserQuestion으로 분류 결과를 표시하고, 사용자 확인(또는 수정) 후 실행한다.
+3. **실행** — canonical은 레포 레벨로 승격, expired는 프로젝트 아카이브로 이동, active는 현 위치 유지.
