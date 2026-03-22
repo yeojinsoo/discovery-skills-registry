@@ -1,6 +1,6 @@
 ---
 name: spec-agent
-description: "실행 스펙 생성/실행/수정 통합 스킬. 실행 스펙 데이터를 외부 경로($HOME/.discovery-skills/spec-agent/repos/)에 저장하여 레포 무관 재사용 가능. /spec-agent context [name] — create 전 문제 구체화, /spec-agent create [name] — 신규 생성, /spec-agent exec [name] — 실행, /spec-agent update [name] — 수정, /spec-agent validate [name] — DoD 검증, /spec-agent summary — PR 본문 생성/조회/수정, /spec-agent status — 프로젝트 현황 조회, /spec-agent distill — 프로젝트 교훈 정리. 이 스킬은 사용자가 명시적으로 \"/spec-agent\" 커맨드를 입력했을 때만 실행한다. 자연어 요청으로는 트리거하지 않는다."
+description: "실행 스펙 생성/실행/수정 통합 스킬. 실행 스펙 데이터를 외부 경로($HOME/.discovery-skills/spec-agent/repos/)에 저장하여 레포 무관 재사용 가능. /spec-agent context [name] — create 전 문제 구체화, /spec-agent create [name] — 신규 생성, /spec-agent exec [name] — 실행, /spec-agent update [name] — 수정, /spec-agent validate [name] — DoD 검증, /spec-agent summary — PR 본문 생성/조회/수정, /spec-agent status — 프로젝트 현황 조회, /spec-agent distill — 프로젝트 교훈 정리, /spec-agent close — 프로젝트 종료. 이 스킬은 사용자가 명시적으로 \"/spec-agent\" 커맨드를 입력했을 때만 실행한다. 자연어 요청으로는 트리거하지 않는다."
 allowed-tools:
   - Read
   - Write

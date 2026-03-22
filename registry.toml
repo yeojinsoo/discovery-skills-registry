@@ -7,8 +7,8 @@ content_hash = "6acee949ee5a377274ffd45e71c6b37a752d8aa56587248823d1ee89b182d916
 description = "개념이나 시스템을 논리적으로 완전 해체하는 분석 스킬"
 
 [skills.spec-agent]
-version = "0.2.0"
-content_hash = "2fc77e28eab6ee94487209176e4e7c4d6649339e184f0e4d65743bcfa33a7c5d"
+version = "0.2.1"
+content_hash = "be4a13f772864dab74642c9911fae265a9f859a80d142bd9d1c6f19cb11fe6d6"
 depends_on = [{ name = "logical-analysis", ref_version = "0.2.0" }]
 description = "실행 스펙 생성/실행/수정 통합 스킬"
 

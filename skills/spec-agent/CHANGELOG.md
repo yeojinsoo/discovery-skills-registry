@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.1 (2026-03-22)
+- description에 close 커맨드 노출 추가
+
 ## 0.2.0 (2026-03-21)
 - project-planner → spec-agent 용어 전면 리브랜딩 (plan→spec, 실행 계획→실행 스펙)
 - 런타임 데이터 경로를 `$HOME/.discovery-skills/spec-agent/repos/`로 외부 분리
