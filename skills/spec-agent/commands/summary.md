@@ -11,6 +11,7 @@
 | §3-2 reconcile_spec_with_diff | 이 파일 내 인라인 (§3-2) | SPEC.md-diff 정합성 검증 |
 | §3-3 structural_analysis | `references/analysis-profiles.md` summary 프로파일 | 공유 분석 방법론 (SOT 유지) |
 | §4-8 compose_body | 이 파일 내 인라인 (§4-8) | PR 본문 템플릿 + 작성 지침 |
+| §8-1 post_compose_verify | 이 파일 내 인라인 (§8-1) | 생성 본문 사실 정합성 기계적 검증 |
 | §9 save_and_output | `rules/history-file-conventions.md` | history.jsonl 스키마 (공유 SOT) |
 
 ### 서브커맨드 라우팅
@@ -37,7 +38,7 @@ parse_args → resolve_specs
   → [create] collect_diff → detect_deploy_apps → load_specs → load_validation
     → reconcile_spec_with_diff → structural_analysis
     → derive_conditions → group_changes → detect_decisions
-    → verify_conditions → compose_body → save_and_output
+    → verify_conditions → compose_body → post_compose_verify → save_and_output
   → [current] load_latest → output
   → [update] load_version → apply_changes → save_and_output
 ```
@@ -69,9 +70,17 @@ BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^re
 
 git log ${BASE_BRANCH}..HEAD --oneline
 git diff ${BASE_BRANCH}..HEAD --stat
-git diff ${BASE_BRANCH}..HEAD | head -300
 git status --short | grep '^??'
 ```
+
+**커밋별 diff 수집 전략**:
+
+`git log ${BASE_BRANCH}..HEAD --oneline`의 각 커밋에 대해:
+
+1. **변경 파일 목록 수집**: `git show {commit_sha} --stat`으로 커밋별 변경 파일과 변경량(줄 수) 수집
+2. **핵심 파일 선별**: 전체 커밋의 변경량을 합산하여, 변경 줄 수 기준 상위 파일을 핵심 파일로 선별 (기준: 변경 줄 수 내림차순 정렬 후 누적 변경량이 전체의 80%에 도달할 때까지, 또는 최대 15개 파일)
+3. **핵심 파일 전문 읽기**: 핵심 파일에 대해서만 `git diff ${BASE_BRANCH}..HEAD -- {file_path}`로 전체 diff를 수집
+4. **나머지 파일**: `--stat` 정보만 유지 (전문 diff를 수집하지 않음)
 
 참조 PR 있으면: `gh pr view {PR_NUMBER} --json title,body`
 
@@ -368,6 +377,152 @@ sequenceDiagram 작성:
 PR 본문 말미에 적용된 분석 방법론 표시:
 - 분석 프로파일: summary (analysis-profiles.md)
 - 구조 분석: Phase T + Phase A (구축 패스만)
+
+#### 8-1. post_compose_verify — 생성 본문 사실 정합성 검증
+
+- **목적**: compose_body가 생성한 PR 본문의 사실 정합성을 기계적으로 검증한다. 본문에 서술된 파일명·변경 수치·함수명·흐름 설명 등이 실제 diff 데이터와 일치하는지 대조하여, 사실과 다른 서술이 최종 산출물에 포함되는 것을 방지한다.
+- **입력**: compose_body의 출력 (PR 제목 + PR 본문 마크다운), collect_diff 단계에서 수집한 diff 데이터, base_branch 이름
+- **출력**: 검증 결과 — 오류 목록(`[{location, claim, diff_fact, severity}]`) 또는 통과(빈 리스트)
+- **위치**: compose_body 직후, save_and_output 직전
+
+**검증 (a) — S-ID 정합성**:
+
+생성된 PR 본문에서 S-ID(S-1, S-2, ...)가 세 곳에 등장한다. 세 곳의 S-ID 집합이 정확히 일치해야 한다.
+
+1. **해결 조건 테이블**: `## 해결 조건` 섹션의 테이블에서 `S-\d+` 패턴으로 S-ID 집합을 추출한다
+2. **테스트 커버리지 테이블**: `## 테스트` 섹션의 테이블에서 `조건` 컬럼의 `S-\d+` 값을 추출한다 (빈 셀은 직전 행의 S-ID를 이어받음)
+3. **narrative 참조**: `## 구현` 섹션의 서술 텍스트에서 `S-\d+` 패턴으로 참조된 S-ID 목록을 추출한다
+
+검증 규칙:
+- 해결 조건 테이블의 S-ID 집합을 기준(SOT)으로 삼는다
+- 테스트 커버리지 테이블에 해결 조건 S-ID가 하나라도 누락되면 → 오류
+- narrative에서 해결 조건 테이블에 없는 S-ID를 참조하면 → 오류
+
+오류 출력 예시:
+```json
+{
+  "location": "## 테스트 테이블",
+  "claim": "S-3이 커버리지 테이블에 존재해야 함",
+  "diff_fact": "테스트 테이블에 S-3에 대한 행이 없음",
+  "severity": "error"
+}
+```
+
+**검증 (b) — 코드 식별자 존재 확인**:
+
+PR 본문에서 백틱(`` ` ``)으로 감싼 코드 식별자를 추출하여 코드베이스에 실재하는지 확인한다.
+
+1. **추출**: 본문에서 단일 백틱으로 감싼 토큰(`` `identifier` ``)을 모두 추출한다
+2. **분류**: 추출된 식별자를 다음으로 분류한다
+   - **파일 경로**: `/` 포함 또는 확장자(`.ts`, `.py`, `.md` 등) 포함 → 파일 경로로 판정
+   - **코드 식별자**: 그 외 (함수명, 변수명, 클래스명 등)
+   - **제외 대상**: 마크다운 서식 키워드(`신규`, `변경`, `x`, 표 셀 내 단순 값 등), S-ID(`S-\d+`), TC-ID(`TC-\d+`), git 명령어, PR 본문 서식 용어는 검증 대상에서 제외
+3. **파일 경로 검증**: 핵심 파일(§2 collect_diff에서 선별된 파일)에 해당하면 `git show HEAD:{path}`로 존재 확인. diff에서 `new file`로 생성된 파일은 HEAD에서 확인, 삭제된 파일은 base에서 확인
+4. **코드 식별자 검증**: `grep -r '{identifier}' .` 으로 코드베이스에서 존재 여부 확인 (검증 대상은 핵심 파일에 등장하는 식별자로 한정 — §2 collect_diff의 핵심 파일 선별 기준 적용: 변경 줄 수 내림차순 누적 80% 또는 최대 15개)
+5. **판정**: 코드베이스에 미존재하는 식별자는 환각(hallucination) 후보로 플래그
+
+오류 출력 예시:
+```json
+{
+  "location": "## 구현 > 1단계 narrative",
+  "claim": "`validateWorkflowName` 함수가 존재한다는 서술",
+  "diff_fact": "grep -r 'validateWorkflowName' . 결과 0건",
+  "severity": "error"
+}
+```
+
+**검증 (c) — 기존 코드 전제 확인**:
+
+PR 본문에서 '기존' 표현을 사용하여 base 브랜치의 코드 상태를 전제하는 서술이 있을 때, 해당 전제가 사실인지 확인한다.
+
+1. **추출**: 본문에서 `기존`, `기존에`, `기존의`, `기존과`, `이전에`, `기존 코드` 등의 표현이 포함된 문장을 추출한다
+2. **참조 식별**: 해당 문장에서 백틱으로 감싼 코드 식별자 또는 파일 경로를 추출한다
+3. **base 브랜치 검증**:
+   - 파일 경로인 경우: `git show origin/{base_branch}:{path}` 로 base 브랜치에 파일 존재 확인
+   - 코드 식별자인 경우: `git show origin/{base_branch}:{관련_파일_경로}` 로 파일을 조회한 뒤, 해당 식별자가 파일 내에 존재하는지 확인 (관련 파일 경로는 diff의 변경 파일 목록에서 추론)
+4. **판정**: base 브랜치에 미존재하면 전제 오류(premise error)로 플래그
+
+오류 출력 예시:
+```json
+{
+  "location": "## 구현 > 2단계 narrative",
+  "claim": "'기존의 `handleDuplicate` 함수를 확장하여...'",
+  "diff_fact": "git show origin/main:src/handlers/workflow.ts 에 handleDuplicate 함수 미존재",
+  "severity": "error"
+}
+```
+
+**검증 흐름 요약**:
+
+```
+compose_body 출력 (PR 본문 마크다운)
+  │
+  ├─ (a) S-ID 정합성 ──────── 해결 조건 vs 커버리지 vs narrative → S-ID 불일치 오류
+  ├─ (b) 코드 식별자 존재 ──── 백틱 식별자 vs grep/git show → 환각 후보
+  └─ (c) 기존 코드 전제 ───── '기존' 문장 vs git show origin/{base} → 전제 오류
+  │
+  ▼
+  errors: [{location, claim, diff_fact, severity}, ...]
+```
+
+**오류 처리 — 자동 수정 루프**:
+
+post_compose_verify는 오류 발견 시 compose_body를 오류 피드백과 함께 재호출하여 자동 수정을 시도한다. compose_body 내부 로직은 변경하지 않으며, 오류 목록을 추가 컨텍스트로 주입하여 동일한 compose_body를 재실행한다.
+
+**상태 변수**:
+- `verify_attempt`: 현재 검증 시도 횟수 (초기값 `1`)
+- `max_verify_attempts`: 최대 검증 시도 횟수 (`2`)
+
+**흐름**:
+
+```
+compose_body 최초 실행
+  │
+  ▼
+post_compose_verify (verify_attempt = 1)
+  │
+  ├─ 오류 0건 → save_and_output으로 진행
+  │
+  └─ 오류 1건 이상 & verify_attempt ≤ max_verify_attempts
+      │
+      ├─ 1) 경고 출력:
+      │     ⚠️ post_compose_verify: {N}건 오류 발견 (시도 {verify_attempt}/{max_verify_attempts})
+      │     각 오류를 [{location, claim, diff_fact, severity}] 형식으로 나열
+      │
+      ├─ 2) compose_body 재호출 (오류 피드백 주입):
+      │     compose_body(§8)를 동일 입력 + 아래 오류 피드백으로 재실행
+      │     ┌──────────────────────────────────────────┐
+      │     │ ## 검증 오류 피드백 (자동 수정 요청)      │
+      │     │ 이전 생성 본문에서 다음 오류가 발견되었다. │
+      │     │ 아래 오류를 수정하여 본문을 재생성하라.    │
+      │     │                                          │
+      │     │ ```json                                  │
+      │     │ [{location, claim, diff_fact, severity}]  │
+      │     │ ```                                      │
+      │     └──────────────────────────────────────────┘
+      │
+      ├─ 3) verify_attempt += 1
+      │
+      └─ 4) post_compose_verify 재검증 (루프 상단으로)
+           │
+           ├─ 오류 0건 → save_and_output으로 진행
+           │
+           └─ 오류 1건 이상 & verify_attempt > max_verify_attempts
+               │
+               ▼
+               경고 출력 후 현재 본문으로 진행:
+               ⚠️ post_compose_verify: {N}건 오류 잔존 — 최대 재시도 횟수({max_verify_attempts}회) 초과, 현재 본문으로 진행
+               → save_and_output으로 진행 (오류 목록 전달)
+```
+
+**최종 오류 처리 (save_and_output 전달)**:
+- 자동 수정 루프 종료 후 잔존하는 오류가 있는 경우, 오류 목록을 save_and_output에 전달하여 PR 본문 말미에 경고 블록으로 삽입:
+  ```markdown
+  > ⚠️ **post_compose_verify 검증 경고** ({N}건)
+  > - [{location}] {claim} — 실제: {diff_fact}
+  ```
+- `severity: "error"` 항목과 `severity: "warning"` 항목 모두 동일 경고 블록에 포함하되, warning은 참고 수준으로 표기
+- 자동 수정 루프에서 오류가 모두 해소된 경우 → 빈 리스트, save_and_output에 경고 블록 미삽입
 
 #### 9. save_and_output — 저장 및 출력
 

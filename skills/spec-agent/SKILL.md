@@ -202,6 +202,34 @@ PROJ_DIR = ${REPO_DIR}/projects/{project_name}/
   | validate (PARTIAL/NOT_ACHIEVED) | → DEFINING | 루프백 |
   | close | → CLOSED | 어떤 상태에서든 |
 
+### 0-4-1. §SPEC 마커 출력
+
+모든 변경 커맨드(exec, create, update, validate, summary, distill, close)는 실행 시작 시 아래 형식의 마커 텍스트를 **1행** 출력한다.
+`context`와 `status`는 읽기 전용이므로 마커를 출력하지 않는다.
+
+```
+§SPEC {repo_slug}/{project_name}/{spec_name} {subcmd} {timestamp+09:00}
+```
+
+검증 정규식: `^§SPEC \S+/\S+/\S+ \S+ \d{4}-\d{2}-\d{2}T.+$`
+
+예시:
+```
+§SPEC commerceos-backend-v2/AG-1614/migration-safety-fixes exec 2026-03-23T15:30:00+09:00
+§SPEC skills/spec-agent/project-status create 2026-03-23T16:00:00+09:00
+```
+
+**Step 0에서 즉시 출력하는 커맨드** — spec_name이 §0-1 args 파싱에서 이미 확정된 경우:
+- `exec`, `update`, `validate` → 여기서 바로 마커 출력 후 §0-5로 진행.
+
+**각 command 파일에서 출력하는 커맨드** — Step 0 시점에서 spec_name이 미확정인 경우:
+- `create` → spec_name이 args에 없을 수 있음. §CREATE 내 spec_name 확정 직후 출력.
+- `summary` → --spec 지정 시 해당 spec_name 사용. --spec 미지정(프로젝트 레벨) 시 `_project` 사용. 커맨드 파일에서 출력.
+- `distill` → 프로젝트 레벨 커맨드. spec_name 자리에 `_project`를 사용하여 커맨드 파일 시작 시 출력.
+- `close` → 프로젝트 레벨 커맨드. spec_name 자리에 `_project`를 사용하여 커맨드 파일 시작 시 출력.
+
+**timestamp 생성**: Bash 실행 `date +%Y-%m-%dT%H:%M:%S%z` — 시스템 TZ에 따라 오프셋이 자동 결정된다. KST 환경이면 `+0900`이 출력되며, 그대로 사용한다.
+
 ### 0-5. 서브커맨드 라우팅
 
 서브커맨드에 따라 해당 command 파일을 Read로 로드한 후 실행:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0 (2026-03-24)
+- summary 커맨드에 post_compose_verify 검증 단계 신설 (S-ID 정합성, 코드 식별자 존재, 기존 코드 전제 확인)
+- collect_diff head -300 절삭 제거 → 커밋별 핵심 파일 전문 읽기 전략
+- 검증 오류 시 compose_body 자동 재실행 루프 (max 2회)
+- §SPEC 마커 출력 프로토콜 추가 (§0-4-1)
+
 ## 0.2.1 (2026-03-22)
 - description에 close 커맨드 노출 추가
 
